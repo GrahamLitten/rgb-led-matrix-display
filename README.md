@@ -69,14 +69,16 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 - Green: Normal arrival (6+ min)
 
 **Station:** Fulton Street (Uptown A train only)
-**Current Status:** Using representative mock data for testing/visualization
-**For Live Data:** See `MTA_INTEGRATION.md` for Raspberry Pi deployment guide
+**Data Source:** ✅ **Live data from Transiter API** - [demo.transiter.dev](https://demo.transiter.dev)
+**API:** Clean REST JSON API (no protobuf parsing needed!)
+**Updates:** Real-time subway arrivals
 
-⚠️ **Why Mock Data?**
-- MTA GTFS-realtime requires Protocol Buffer parsing (complex in browsers)
-- CORS restrictions prevent direct browser access
-- Needs backend server (Python/Node.js) for accurate real-time arrivals
-- Working examples: [SubwayBuddy](https://github.com/williamwinfree/subwaybuddy), [Arrivals Board](https://github.com/benarnav/arrivals-board)
+🎉 **Why Transiter is Perfect:**
+- Clean REST API that returns JSON (no protobuf complexity!)
+- No CORS issues - works directly in browser
+- Built-in NYC subway support with proper stop IDs
+- Free demo server available: [https://demo.transiter.dev](https://demo.transiter.dev)
+- Reference: [Transiter GitHub](https://github.com/jamespfennell/transiter)
 
 ## 📏 Technical Details
 

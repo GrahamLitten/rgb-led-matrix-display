@@ -1,12 +1,27 @@
 # MTA Real-Time Subway Integration Guide
 
-## Current Status
-The web-based simulator uses **representative mock data** because:
-- MTA GTFS-realtime feed uses Protocol Buffer format (binary)
-- Browser-based parsing has CORS and complexity issues
-- Requires backend processing for accurate real-time data
+## Current Status ✅
+The web-based simulator now uses **LIVE DATA from Transiter API**!
 
-## For Live Data on Raspberry Pi
+### Using Transiter
+[Transiter](https://github.com/jamespfennell/transiter) is a web service that provides clean REST API access to transit data.
+
+**Benefits:**
+- ✅ Clean JSON REST API (no protobuf parsing!)
+- ✅ Works directly in browser (no CORS issues)
+- ✅ Real-time NYC subway data
+- ✅ Proper stop ID handling and direction filtering
+- ✅ Free demo server: https://demo.transiter.dev
+
+### API Example
+```javascript
+// Get Fulton Street A train arrivals
+const response = await fetch('https://demo.transiter.dev/systems/us-ny-subway/stops/A38');
+const data = await response.json();
+// Returns: stopTimes with departure times, trip info, destinations, etc.
+```
+
+## For Self-Hosted Transiter on Raspberry Pi
 
 ### Recommended Approach
 
