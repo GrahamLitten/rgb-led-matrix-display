@@ -256,8 +256,7 @@ class WeatherDisplay {
     render() {
         this.matrix.clear();
         
-        // Optional: Draw grid guides (comment out in production)
-        this.drawGridGuides();
+        // Grid guides removed - now shown outside matrix on webpage
         
         if (!this.weather) {
             this.matrix.drawText('LOADING', 8, 12, 255, 255, 0);

@@ -74,6 +74,17 @@ h1 {
     font-size: 0.9em;
 }
 
+.matrix-wrapper {
+    margin-bottom: 30px;
+}
+
+.matrix-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
 .matrix-container {
     background: #000;
     padding: 30px;
@@ -82,7 +93,6 @@ h1 {
                 0 0 0 1px rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: center;
-    margin-bottom: 30px;
     position: relative;
     overflow: hidden;
 }
@@ -98,6 +108,51 @@ h1 {
     border-radius: 16px;
     opacity: 0.3;
     z-index: -1;
+}
+
+.pixel-counter {
+    display: flex;
+    color: #8b9eff;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.pixel-counter .counter-label {
+    color: #a8b4ff;
+    margin-right: 10px;
+    font-weight: 700;
+}
+
+.top-counter {
+    justify-content: center;
+    gap: 80px;
+    margin-bottom: 10px;
+    padding-left: 80px;
+}
+
+.top-counter span:not(.counter-label) {
+    min-width: 20px;
+    text-align: center;
+}
+
+.side-counter {
+    flex-direction: column;
+    gap: 34px;
+    align-items: flex-end;
+    padding-right: 10px;
+}
+
+.side-counter .counter-label {
+    margin-right: 0;
+    margin-bottom: 10px;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+.side-counter span:not(.counter-label) {
+    min-width: 25px;
+    text-align: right;
 }
 
 #ledMatrix {

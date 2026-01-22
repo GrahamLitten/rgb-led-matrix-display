@@ -16,8 +16,26 @@
             <span id="lastUpdate"></span>
         </div>
         
-        <div class="matrix-container">
-            <canvas id="ledMatrix" width="640" height="320"></canvas>
+        <div class="matrix-wrapper">
+            <div class="pixel-counter top-counter">
+                <span class="counter-label">Columns:</span>
+                <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span>
+            </div>
+            <div class="matrix-row">
+                <div class="pixel-counter side-counter">
+                    <div class="counter-label">Rows</div>
+                    <span>0</span>
+                    <span>5</span>
+                    <span>10</span>
+                    <span>15</span>
+                    <span>20</span>
+                    <span>25</span>
+                    <span>30</span>
+                </div>
+                <div class="matrix-container">
+                    <canvas id="ledMatrix" width="640" height="320"></canvas>
+                </div>
+            </div>
         </div>
         
         <div class="info">
