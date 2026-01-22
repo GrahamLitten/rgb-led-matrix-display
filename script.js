@@ -846,10 +846,13 @@ class SubwayDisplay {
                     html += `<p><strong>${idx + 1}.</strong> ${timeStr} - ${train.destination}</p>`;
                 }
             });
-            const stopInfo = this.trains.length > 0 && this.trains[0].stopId ? 
-                `Stop ID: ${this.trains[0].stopId}` : 
-                'Checking multiple stop IDs';
-            html += `<p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">✓ Live MTA GTFS-realtime feed<br>Station: Fulton St<br>${stopInfo}<br>Found ${this.trains.length} train(s)</p>`;
+            html += `<p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">
+                📍 Fulton Street Station - Uptown A Train<br>
+                ⚠️ Currently using representative times for testing<br>
+                <strong style="color: #f093fb;">For live data:</strong> Deploy Python backend on Raspberry Pi<br>
+                Reference: <a href="https://github.com/williamwinfree/subwaybuddy" target="_blank" style="color: #667eea;">SubwayBuddy</a> | 
+                <a href="https://github.com/benarnav/arrivals-board" target="_blank" style="color: #667eea;">Arrivals Board</a>
+            </p>`;
             infoDiv.innerHTML = html;
         } else {
             infoDiv.innerHTML = '<p>Loading subway data...</p>';
