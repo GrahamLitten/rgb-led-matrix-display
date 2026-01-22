@@ -801,33 +801,77 @@ class SubwayDisplay {
     }
 
     async fetchTrains() {
-        // FOR NOW: Using simpler approach with curated mock data
-        // The MTA GTFS-realtime feed requires a backend server to properly parse
-        // protobuf data and handle CORS issues. This would need Node.js/Flask backend.
-        
-        // RECOMMENDED FOR RASPBERRY PI DEPLOYMENT:
-        // Use Python script with gtfs-realtime-bindings library
-        // Reference: https://github.com/williamwinfree/subwaybuddy
-        
-        console.log('🚇 Subway display - Using representative data');
-        console.log('💡 For live data on Raspberry Pi, use Python backend with MTA GTFS library');
-        
         try {
-            // Simulated realistic subway times (update these manually or via simple API)
-            // You can replace this with actual MTA times from your backend when ready
-            this.trains = [
-                { minutes: 3, destination: 'UPTOWN' },
-                { minutes: 9, destination: 'UPTOWN' },
-                { minutes: 16, destination: 'UPTOWN' },
-                { minutes: 24, destination: 'UPTOWN' }
-            ];
+            // Using Transiter API - clean REST API for NYC subway
+            // Demo server: https://demo.transiter.dev
+            // Fulton Street A train stop ID: A38 (we'll try multiple)
+            
+            console.log('🚇 Fetching A train data from Transiter API...');
+            
+            // Try multiple stop IDs for Fulton Street
+            const stopIds = ['A38', 'A31', 'A27']; // Fulton Street A train platforms
+            
+            let allStopTimes = [];
+            
+            for (const stopId of stopIds) {
+                try {
+                    const url = `https://demo.transiter.dev/systems/us-ny-subway/stops/${stopId}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) continue;
+                    
+                    const data = await response.json();
+                    
+                    console.log(`Stop ${stopId}: ${data.name || 'Unknown'}`);
+                    
+                    // Get stop times
+                    if (data.stopTimes && data.stopTimes.length > 0) {
+                        data.stopTimes.forEach(st => {
+                            // Filter for A train only, uptown direction
+                            const isATrain = st.trip?.route?.id === 'A';
+                            const isUptown = st.trip?.directionId === 0; // 0 = uptown/north, 1 = downtown/south
+                            
+                            if (isATrain && isUptown && st.departure) {
+                                const departureTime = st.departure.time;
+                                const now = Math.floor(Date.now() / 1000);
+                                const minutesAway = Math.floor((departureTime - now) / 60);
+                                
+                                if (minutesAway >= 0 && minutesAway < 30) {
+                                    allStopTimes.push({
+                                        minutes: minutesAway,
+                                        destination: st.trip.destination?.name || 'UPTOWN',
+                                        headsign: st.headsign || 'Uptown'
+                                    });
+                                }
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.log(`Stop ${stopId} not found, trying next...`);
+                }
+            }
+            
+            // Sort by arrival time and take first 4
+            this.trains = allStopTimes
+                .sort((a, b) => a.minutes - b.minutes)
+                .slice(0, 4);
+            
+            console.log(`✅ Found ${this.trains.length} uptown A trains`);
+            
+            // If no trains found
+            if (this.trains.length === 0) {
+                console.warn('⚠️ No uptown A trains found');
+                this.trains = [
+                    { minutes: null, destination: 'NO TRAINS' }
+                ];
+            }
             
             this.updateInfoPanel();
             return true;
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error fetching Transiter data:', error);
             this.trains = [
-                { minutes: null, destination: 'NO DATA', tripId: null }
+                { minutes: null, destination: 'ERROR' }
             ];
             this.updateInfoPanel();
             return false;
@@ -848,10 +892,9 @@ class SubwayDisplay {
             });
             html += `<p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">
                 📍 Fulton Street Station - Uptown A Train<br>
-                ⚠️ Currently using representative times for testing<br>
-                <strong style="color: #f093fb;">For live data:</strong> Deploy Python backend on Raspberry Pi<br>
-                Reference: <a href="https://github.com/williamwinfree/subwaybuddy" target="_blank" style="color: #667eea;">SubwayBuddy</a> | 
-                <a href="https://github.com/benarnav/arrivals-board" target="_blank" style="color: #667eea;">Arrivals Board</a>
+                ✅ <strong style="color: #64ffda;">Live data from Transiter API</strong><br>
+                API: <a href="https://demo.transiter.dev" target="_blank" style="color: #667eea;">demo.transiter.dev</a><br>
+                Found ${this.trains.filter(t => t.minutes !== null).length} train(s)
             </p>`;
             infoDiv.innerHTML = html;
         } else {
