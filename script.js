@@ -153,7 +153,8 @@ class WeatherDisplay {
                 temp: Math.round(data.current_condition[0].temp_F),
                 condition: data.current_condition[0].weatherDesc[0].value,
                 humidity: data.current_condition[0].humidity,
-                feelsLike: Math.round(data.current_condition[0].FeelsLikeF)
+                feelsLike: Math.round(data.current_condition[0].FeelsLikeF),
+                weatherCode: data.current_condition[0].weatherCode
             };
             
             this.updateInfoPanel();
@@ -164,7 +165,8 @@ class WeatherDisplay {
                 temp: '--',
                 condition: 'Error',
                 humidity: '--',
-                feelsLike: '--'
+                feelsLike: '--',
+                weatherCode: '113'
             };
             return false;
         }
@@ -191,22 +193,272 @@ class WeatherDisplay {
             return;
         }
 
-        // Display "NYC" at the top
-        this.matrix.drawText('NYC', 20, 2, 100, 150, 255);
+        // Get weather icon and colors
+        const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // Display temperature in large text
+        // Draw weather icon on the left (10x10 icon)
+        this.drawWeatherIcon(weatherInfo.icon, 2, 3, weatherInfo.colors);
+        
+        // Draw temperature (large) - centered right
         const tempStr = `${this.weather.temp}`;
-        this.matrix.drawText(tempStr, 8, 12, 255, 100, 0);
+        const tempX = tempStr.length === 1 ? 22 : 18;
+        this.matrix.drawText(tempStr, tempX, 3, 255, 220, 180);
         
-        // Display degree symbol and F
-        this.matrix.drawText('F', 38, 12, 200, 80, 0);
+        // Draw degree symbol
+        this.drawDegreeSymbol(tempX + (tempStr.length * 6), 3, 255, 200, 150);
         
-        // Display condition on bottom
-        const conditionShort = this.getShortCondition(this.weather.condition);
-        this.matrix.drawText(conditionShort, 2, 24, 150, 255, 150);
+        // Draw "NYC" label in top right corner
+        this.matrix.drawText('NYC', 46, 1, 100, 180, 255);
+        
+        // Draw divider line
+        for (let x = 0; x < 64; x++) {
+            this.matrix.setPixel(x, 15, 50, 50, 80);
+        }
+        
+        // Draw condition text on bottom half
+        const conditionText = this.getShortCondition(this.weather.condition);
+        const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
+        this.matrix.drawText(conditionText, condX, 18, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        
+        // Draw humidity indicator
+        this.drawHumidityBar(2, 27, this.weather.humidity);
         
         this.matrix.render();
     }
+
+    drawDegreeSymbol(x, y, r, g, b) {
+        // Draw a small circle for degree symbol
+        this.matrix.setPixel(x, y, r, g, b);
+        this.matrix.setPixel(x + 1, y, r, g, b);
+        this.matrix.setPixel(x, y + 1, r, g, b);
+        this.matrix.setPixel(x + 1, y + 1, r, g, b);
+    }
+
+    drawHumidityBar(x, y, humidity) {
+        // Draw humidity label
+        this.matrix.drawText('H', x, y, 100, 200, 255);
+        
+        // Draw humidity percentage bar
+        const barWidth = Math.floor((humidity / 100) * 24);
+        const barStartX = x + 8;
+        
+        for (let i = 0; i < 24; i++) {
+            const color = i < barWidth ? 
+                { r: 50, g: 150 + i * 4, b: 255 } : 
+                { r: 20, g: 20, b: 40 };
+            
+            this.matrix.setPixel(barStartX + i, y + 1, color.r, color.g, color.b);
+            this.matrix.setPixel(barStartX + i, y + 2, color.r, color.g, color.b);
+        }
+        
+        // Draw percentage text
+        const humidityText = `${humidity}%`;
+        this.matrix.drawText(humidityText, barStartX + 26, y, 150, 220, 255);
+    }
+
+    drawWeatherIcon(iconData, x, y, colors) {
+        for (let row = 0; row < iconData.length; row++) {
+            for (let col = 0; col < iconData[row].length; col++) {
+                const pixel = iconData[row][col];
+                if (pixel > 0 && colors[pixel - 1]) {
+                    const color = colors[pixel - 1];
+                    this.matrix.setPixel(x + col, y + row, color.r, color.g, color.b);
+                }
+            }
+        }
+    }
+
+    getWeatherInfo(code, condition) {
+        // Weather codes from wttr.in
+        const weatherCode = parseInt(code);
+        
+        // Sunny/Clear
+        if ([113].includes(weatherCode)) {
+            return {
+                icon: this.icons.sun,
+                colors: [
+                    { r: 255, g: 220, b: 0 },   // bright yellow sun
+                    { r: 255, g: 180, b: 0 },   // orange glow
+                ],
+                textColor: { r: 255, g: 200, b: 100 }
+            };
+        }
+        
+        // Partly Cloudy
+        if ([116].includes(weatherCode)) {
+            return {
+                icon: this.icons.partlyCloudy,
+                colors: [
+                    { r: 255, g: 220, b: 50 },  // sun
+                    { r: 200, g: 200, b: 220 }, // cloud
+                ],
+                textColor: { r: 200, g: 220, b: 255 }
+            };
+        }
+        
+        // Cloudy/Overcast
+        if ([119, 122].includes(weatherCode)) {
+            return {
+                icon: this.icons.cloudy,
+                colors: [
+                    { r: 150, g: 150, b: 170 }, // light cloud
+                    { r: 100, g: 100, b: 130 }, // dark cloud
+                ],
+                textColor: { r: 180, g: 180, b: 200 }
+            };
+        }
+        
+        // Rainy
+        if ([176, 263, 266, 281, 284, 293, 296, 299, 302, 305, 308, 311, 314, 317, 320, 323, 326, 329, 332, 335, 338, 350, 353, 356, 359, 362, 365, 368, 371, 374, 377].includes(weatherCode)) {
+            return {
+                icon: this.icons.rain,
+                colors: [
+                    { r: 100, g: 120, b: 150 }, // cloud
+                    { r: 100, g: 150, b: 255 }, // rain drops
+                ],
+                textColor: { r: 120, g: 180, b: 255 }
+            };
+        }
+        
+        // Snowy
+        if ([179, 182, 185, 227, 230, 325, 328, 331, 334, 337, 339, 342, 345, 368, 371, 374, 377, 392, 395].includes(weatherCode)) {
+            return {
+                icon: this.icons.snow,
+                colors: [
+                    { r: 120, g: 130, b: 150 }, // cloud
+                    { r: 220, g: 240, b: 255 }, // snowflakes
+                ],
+                textColor: { r: 200, g: 230, b: 255 }
+            };
+        }
+        
+        // Thunderstorm
+        if ([386, 389, 392, 395].includes(weatherCode)) {
+            return {
+                icon: this.icons.thunder,
+                colors: [
+                    { r: 80, g: 80, b: 100 },   // dark cloud
+                    { r: 255, g: 255, b: 100 }, // lightning
+                ],
+                textColor: { r: 255, g: 255, b: 150 }
+            };
+        }
+        
+        // Fog/Mist
+        if ([143, 248, 260].includes(weatherCode)) {
+            return {
+                icon: this.icons.fog,
+                colors: [
+                    { r: 150, g: 150, b: 160 }, // fog layers
+                ],
+                textColor: { r: 180, g: 180, b: 190 }
+            };
+        }
+        
+        // Default cloudy
+        return {
+            icon: this.icons.cloudy,
+            colors: [
+                { r: 150, g: 150, b: 170 },
+                { r: 100, g: 100, b: 130 },
+            ],
+            textColor: { r: 180, g: 180, b: 200 }
+        };
+    }
+
+    // Weather icons as pixel art (10x10)
+    icons = {
+        sun: [
+            [0,0,0,1,0,0,1,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,1,1,1,1,0,0,0],
+            [1,0,1,2,2,2,1,0,1,0],
+            [0,0,1,2,2,2,1,0,0,0],
+            [0,0,1,2,2,2,1,0,0,0],
+            [1,0,1,2,2,2,1,0,1,0],
+            [0,0,1,1,1,1,1,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,1,0,0,1,0,0,0],
+        ],
+        
+        partlyCloudy: [
+            [0,0,1,0,0,0,0,0,0,0],
+            [0,0,0,1,1,0,0,0,0,0],
+            [1,0,1,1,1,2,2,2,0,0],
+            [0,0,0,0,2,2,2,2,2,0],
+            [0,0,0,2,2,2,2,2,2,0],
+            [0,0,0,2,2,2,2,2,2,0],
+            [0,0,0,0,2,2,2,2,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+        ],
+        
+        cloudy: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,1,1,1,0,0,0,0],
+            [0,1,1,2,2,1,1,0,0,0],
+            [1,1,2,2,2,2,1,1,1,0],
+            [1,2,2,2,2,2,2,2,1,1],
+            [1,2,2,2,2,2,2,2,2,1],
+            [1,2,2,2,2,2,2,2,1,0],
+            [0,1,1,1,1,1,1,1,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+        ],
+        
+        rain: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,1,1,1,0,0,0,0],
+            [0,1,1,1,1,1,1,0,0,0],
+            [1,1,1,1,1,1,1,1,0,0],
+            [0,1,1,1,1,1,1,0,0,0],
+            [0,0,2,0,2,0,2,0,0,0],
+            [0,0,2,0,2,0,2,0,0,0],
+            [0,2,0,2,0,2,0,0,0,0],
+            [0,2,0,2,0,2,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+        ],
+        
+        snow: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,1,1,1,0,0,0,0],
+            [0,1,1,1,1,1,1,0,0,0],
+            [1,1,1,1,1,1,1,1,0,0],
+            [0,1,1,1,1,1,1,0,0,0],
+            [0,2,0,2,0,2,0,2,0,0],
+            [0,0,2,0,2,0,2,0,0,0],
+            [0,2,0,2,0,2,0,2,0,0],
+            [0,0,2,0,2,0,2,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+        ],
+        
+        thunder: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,1,1,1,1,0,0,0,0],
+            [0,1,1,1,1,1,1,0,0,0],
+            [1,1,1,1,1,1,1,1,0,0],
+            [0,1,1,1,1,2,2,0,0,0],
+            [0,0,0,0,2,2,0,0,0,0],
+            [0,0,0,2,2,0,0,0,0,0],
+            [0,0,2,2,0,0,0,0,0,0],
+            [0,0,2,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+        ],
+        
+        fog: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,1,1,1,1,1,1,1,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,1,1,1,1,1,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,1,1,1,1,1,1,1,0,0],
+            [0,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,1,1,1,1,1,0],
+            [0,0,0,0,0,0,0,0,0,0],
+        ],
+    };
 
     getShortCondition(condition) {
         const mapping = {
@@ -214,12 +466,18 @@ class WeatherDisplay {
             'Clear': 'CLEAR',
             'Partly cloudy': 'PARTLY',
             'Cloudy': 'CLOUDY',
-            'Overcast': 'OVER',
+            'Overcast': 'OVERCAST',
             'Mist': 'MISTY',
-            'Patchy rain possible': 'RAIN',
-            'Rain': 'RAIN',
-            'Snow': 'SNOW',
-            'Fog': 'FOGGY'
+            'Patchy rain possible': 'LIGHT RAIN',
+            'Light rain': 'LIGHT RAIN',
+            'Rain': 'RAINY',
+            'Heavy rain': 'HEAVY RAIN',
+            'Snow': 'SNOWY',
+            'Light snow': 'LIGHT SNOW',
+            'Heavy snow': 'HEAVY SNOW',
+            'Fog': 'FOGGY',
+            'Thunderstorm': 'STORM',
+            'Thunder': 'STORM'
         };
         
         for (const [key, value] of Object.entries(mapping)) {
