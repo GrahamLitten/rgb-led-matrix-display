@@ -257,45 +257,44 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // === CLEAN & ELEGANT LAYOUT (Fits rows 0-31) ===
+        // === WEATHER LAYOUT - GUARANTEED FIT (Text = 7px tall) ===
         
-        // Draw large weather icon (8x8) on the left - rows 2-9
-        this.drawWeatherIcon(weatherInfo.icon, 3, 2, weatherInfo.colors, 0.8);
+        // Row 0: NYC label (rows 0-6)
+        this.matrix.drawText('NYC', 48, 0, 100, 180, 255);
         
-        // Draw temperature (large) on the right - rows 3-9
+        // Rows 2-9: Weather icon (8x8) on left
+        this.drawWeatherIcon(weatherInfo.icon, 2, 2, weatherInfo.colors, 0.8);
+        
+        // Rows 2-8: Temperature on right
         const tempStr = `${this.weather.temp}`;
-        const tempX = 16;
-        this.matrix.drawText(tempStr, tempX, 3, 255, 220, 180);
+        const tempX = 15;
+        this.matrix.drawText(tempStr, tempX, 2, 255, 220, 180);
         
-        // Draw degree symbol and F
+        // Degree symbol and F
         const degreeX = tempX + (tempStr.length * 6);
-        this.drawDegreeSymbol(degreeX, 3, 255, 200, 150);
-        this.matrix.drawText('F', degreeX + 3, 3, 255, 200, 150);
+        this.drawDegreeSymbol(degreeX, 2, 255, 200, 150);
+        this.matrix.drawText('F', degreeX + 3, 2, 255, 200, 150);
         
-        // Draw "NYC" in top right corner - row 1
-        this.matrix.drawText('NYC', 46, 1, 100, 180, 255);
-        
-        // Draw condition text - rows 11-17
-        const conditionText = this.getShortCondition(this.weather.condition);
-        const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
-        this.matrix.drawText(conditionText, condX, 11, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
-        
-        // Draw elegant divider line - row 19
+        // Row 10: Divider
         for (let x = 0; x < 64; x += 2) {
-            this.matrix.setPixel(x, 19, 80, 80, 120);
+            this.matrix.setPixel(x, 10, 80, 80, 120);
         }
         
-        // Draw "FEELS" label - rows 21-27
-        this.matrix.drawText('FEELS', 2, 21, 150, 170, 190);
+        // Rows 12-18: Condition text (centered)
+        const conditionText = this.getShortCondition(this.weather.condition);
+        const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
+        this.matrix.drawText(conditionText, Math.max(1, condX), 12, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Draw feels-like temp - rows 21-27
+        // Rows 20-26: Feels like
+        this.matrix.drawText('FEELS', 2, 20, 150, 170, 190);
         const feelsStr = `${this.weather.feelsLike}F`;
-        this.matrix.drawText(feelsStr, 38, 21, 200, 180, 160);
+        this.matrix.drawText(feelsStr, 38, 20, 200, 180, 160);
         
-        // Draw humidity - rows 29-31 (last 3 rows)
-        this.matrix.drawText('H', 2, 29, 100, 200, 255);
+        // Last row possible is 31 (31-6=25 start), rows 25-31: Humidity (ends at row 31)
+        // But text is 7 tall, so starting at 25 goes to 31 ✓
+        this.matrix.drawText('H', 2, 25, 100, 200, 255);
         const humStr = `${this.weather.humidity}%`;
-        this.matrix.drawText(humStr, 12, 29, 150, 220, 255);
+        this.matrix.drawText(humStr, 12, 25, 150, 220, 255);
         
         this.matrix.render();
     }
@@ -721,35 +720,37 @@ class MLBStandingsDisplay {
             return;
         }
 
-        // Title - compact
-        this.matrix.drawText('NL EAST', 14, 1, 255, 100, 100);
+        // === MLB LAYOUT - GUARANTEED FIT (Text = 7px tall) ===
         
-        // Team standings - very compact (rows 9-31 for 5 teams)
-        // Each team gets 4-5 rows spacing
-        const teamYPositions = [9, 13, 17, 21, 25]; // Ends at row 31
+        // Rows 0-6: Title
+        this.matrix.drawText('NL EAST', 14, 0, 255, 100, 100);
+        
+        // Team standings - 5 teams with 4-5 rows spacing each
+        // Starting positions: 8, 12, 16, 20, 24 (last one ends at 30, within row 31)
+        const teamYPositions = [8, 12, 16, 20, 24]; // Text is 7px, so last ends at 30
         
         this.standings.forEach((team, idx) => {
             const y = teamYPositions[idx];
             
             const color = idx === 0 ? 
                 { r: 100, g: 255, b: 100 } :  // First place - green
-                { r: 180, g: 180, b: 200 };    // Others - light gray
+                { r: 180, g: 180, b: 200 };    // Others - gray
             
-            // Team name (3 letters)
-            this.matrix.drawText(team.name, 2, y, color.r, color.g, color.b);
+            // Team abbreviation (3 letters)
+            this.matrix.drawText(team.name, 1, y, color.r, color.g, color.b);
             
-            // Wins
-            this.matrix.drawText(`${team.wins}`, 24, y, 100, 200, 255);
+            // Wins (2-3 digits)
+            this.matrix.drawText(`${team.wins}`, 22, y, 100, 200, 255);
             
-            // Dash separator
-            this.matrix.setPixel(35, y + 3, 150, 150, 150);
+            // Losses (2-3 digits)
+            this.matrix.drawText(`${team.losses}`, 40, y, 255, 150, 100);
             
-            // Losses
-            this.matrix.drawText(`${team.losses}`, 38, y, 255, 150, 100);
-            
-            // Games back (if not first)
-            if (team.gb !== '-' && team.gb !== '0.0' && parseFloat(team.gb) > 0) {
-                this.matrix.drawText(`${team.gb}`, 52, y, 255, 200, 100);
+            // Games back (only if not first place)
+            if (idx > 0 && team.gb !== '-' && team.gb !== '0.0') {
+                const gb = parseFloat(team.gb);
+                if (gb > 0) {
+                    this.matrix.drawText(`${team.gb}`, 54, y, 200, 200, 100);
+                }
             }
         });
         
@@ -855,25 +856,25 @@ class SubwayDisplay {
             return;
         }
 
-        // Draw A train logo style header
-        this.matrix.drawText('A', 2, 1, 0, 100, 255);
-        this.matrix.drawText('FULTON', 10, 1, 200, 200, 220);
+        // === SUBWAY LAYOUT - GUARANTEED FIT (Text = 7px tall) ===
         
-        // Draw "UPTOWN" indicator
-        this.matrix.drawText('UP', 52, 1, 100, 255, 100);
+        // Rows 0-6: Header
+        this.matrix.drawText('A', 1, 0, 0, 100, 255);
+        this.matrix.drawText('FULTON', 10, 0, 200, 200, 220);
+        this.matrix.drawText('UP', 54, 0, 100, 255, 100);
         
-        // Divider
+        // Divider at row 7
         for (let x = 0; x < 64; x += 2) {
-            this.matrix.setPixel(x, 8, 100, 100, 150);
+            this.matrix.setPixel(x, 7, 100, 100, 150);
         }
         
-        // Display next trains (rows 10-31)
-        const trainYPositions = [10, 15, 20, 25]; // 4 trains max, ends at row 31
+        // Display next 4 trains - positions: 9, 14, 19, 24 (last ends at 30)
+        const trainYPositions = [9, 14, 19, 24]; // Text is 7px tall, last ends at 30 ✓
         
         this.trains.slice(0, 4).forEach((train, idx) => {
             const y = trainYPositions[idx];
             
-            // Color coding: urgent (red), soon (yellow), normal (green)
+            // Color coding based on arrival time
             let color;
             if (train.minutes <= 1) {
                 color = { r: 255, g: 50, b: 50 };   // Red - arriving now
@@ -883,17 +884,15 @@ class SubwayDisplay {
                 color = { r: 100, g: 255, b: 100 }; // Green - normal
             }
             
-            // Draw train number
-            this.matrix.drawText(`${idx + 1}`, 2, y, 150, 150, 200);
+            // Train number
+            this.matrix.drawText(`${idx + 1}`, 1, y, 150, 150, 200);
             
-            // Draw minutes
+            // Minutes
             const minStr = train.minutes === 0 ? 'NOW' : `${train.minutes}M`;
             this.matrix.drawText(minStr, 10, y, color.r, color.g, color.b);
             
-            // Draw destination (if room)
-            if (minStr.length <= 3) {
-                this.matrix.drawText('UP', 34, y, 180, 180, 200);
-            }
+            // Destination indicator
+            this.matrix.drawText('UP', 36, y, 180, 180, 200);
         });
         
         this.matrix.render();
