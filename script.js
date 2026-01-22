@@ -808,8 +808,8 @@ class SubwayDisplay {
             
             console.log('🚇 Fetching A train data from Transiter API...');
             
-            // Try multiple stop IDs for Fulton Street
-            const stopIds = ['A38', 'A31', 'A27']; // Fulton Street A train platforms
+            // Only use A38 - that's the actual Fulton Street station
+            const stopIds = ['A38']; // Fulton St only!
             
             let allStopTimes = [];
             
@@ -844,15 +844,13 @@ class SubwayDisplay {
                             // Filter for A train only
                             const isATrain = route === 'A';
                             
-                            // Try both direction values (0 or 1) and check headsign for "Inwood" (uptown terminal)
-                            const isUptownByHeadsign = headsign && (
-                                headsign.includes('Inwood') || 
-                                headsign.includes('207') ||
-                                headsign.includes('Uptown')
-                            );
+                            // Filter for uptown: must have "Uptown" in headsign AND NOT "Downtown"
+                            const isUptownByHeadsign = headsign && 
+                                headsign.includes('Uptown') && 
+                                !headsign.includes('Downtown');
                             
-                            // Direction 0 or 1 might be uptown depending on feed, so check headsign primarily
-                            const isUptown = isUptownByHeadsign || directionId === 0;
+                            // Also accept Dir=false (which appears to be uptown based on logs)
+                            const isUptown = isUptownByHeadsign && directionId === false;
                             
                             if (isATrain && isUptown && st.departure) {
                                 const departureTime = st.departure.time;
