@@ -802,11 +802,12 @@ class SubwayDisplay {
 
     async fetchTrains() {
         try {
-            // Using MTA GTFS-realtime feed for A/C/E trains
+            // Using MTA GTFS-realtime feed for A/C/E trains with CORS proxy
             const feedUrl = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace';
+            const corsProxy = 'https://api.allorigins.win/raw?url=';
             
-            // Fetch the protobuf feed
-            const response = await fetch(feedUrl);
+            // Fetch the protobuf feed through CORS proxy
+            const response = await fetch(corsProxy + encodeURIComponent(feedUrl));
             const buffer = await response.arrayBuffer();
             const uint8Array = new Uint8Array(buffer);
             
@@ -814,8 +815,10 @@ class SubwayDisplay {
             const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(uint8Array);
             
             // Fulton Street northbound stop IDs for A train
-            // A train at Fulton St has multiple stop IDs, try them all
-            const FULTON_STOP_IDS = ['A38N', 'A38', 'A27N', 'A27']; // Broadway-Nassau/Fulton St variants
+            // Broadway-Nassau/Fulton St station - trying all possible northbound variants
+            const FULTON_STOP_IDS = ['A31N', 'A31', 'A38N', 'A38', 'A27N', 'A27']; // Northbound variants
+            
+            console.log('🚇 Parsing MTA feed for A train uptown at Fulton St...');
             
             const aTrains = [];
             const now = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
@@ -827,45 +830,41 @@ class SubwayDisplay {
                     const stopTimeUpdates = entity.tripUpdate.stopTimeUpdate;
                     
                     // Check if this is an A train
-                    if (trip.routeId === 'A') {
-                        // Check direction - we want northbound only (trip IDs ending in N or containing northbound indicators)
-                        const isNorthbound = trip.tripId && (
-                            trip.tripId.includes('..N') || 
-                            trip.tripId.includes('.N.') ||
-                            trip.direction === 0 // 0 = one direction, 1 = opposite
-                        );
-                        
-                        if (isNorthbound || !trip.direction) { // If no direction, check all
-                            stopTimeUpdates.forEach(stopTime => {
-                                // Check if this stop is Fulton Street (try multiple IDs)
-                                const stopIdMatch = FULTON_STOP_IDS.some(id => 
-                                    stopTime.stopId === id || stopTime.stopId?.startsWith(id)
-                                );
+                    if (trip.routeId === 'A' || trip.routeId === 'a') {
+                        stopTimeUpdates.forEach(stopTime => {
+                            // Check if this stop is Fulton Street and is northbound (ends with N)
+                            const stopId = stopTime.stopId;
+                            const isNorthboundStop = stopId && stopId.endsWith('N');
+                            const isFultonStop = FULTON_STOP_IDS.some(id => 
+                                stopId === id || stopId?.startsWith(id.replace('N', ''))
+                            );
+                            
+                            // Only process if it's a Fulton stop going northbound
+                            if (isFultonStop && isNorthboundStop) {
+                                // Try multiple time fields
+                                const arrivalTime = 
+                                    stopTime.arrival?.time?.low || 
+                                    stopTime.arrival?.time ||
+                                    stopTime.departure?.time?.low || 
+                                    stopTime.departure?.time;
                                 
-                                if (stopIdMatch) {
-                                    // Try multiple time fields
-                                    const arrivalTime = 
-                                        stopTime.arrival?.time?.low || 
-                                        stopTime.arrival?.time ||
-                                        stopTime.departure?.time?.low || 
-                                        stopTime.departure?.time;
+                                if (arrivalTime) {
+                                    const minutesAway = Math.floor((arrivalTime - now) / 60);
                                     
-                                    if (arrivalTime) {
-                                        const minutesAway = Math.floor((arrivalTime - now) / 60);
-                                        
-                                        // Only include trains arriving in the next 30 minutes
-                                        if (minutesAway >= 0 && minutesAway < 30) {
-                                            aTrains.push({
-                                                minutes: minutesAway,
-                                                destination: 'UPTOWN',
-                                                tripId: trip.tripId,
-                                                stopId: stopTime.stopId
-                                            });
-                                        }
+                                    console.log(`Found A train: ${minutesAway} min away at stop ${stopId}`);
+                                    
+                                    // Only include trains arriving in the next 30 minutes
+                                    if (minutesAway >= 0 && minutesAway < 30) {
+                                        aTrains.push({
+                                            minutes: minutesAway,
+                                            destination: 'UPTOWN',
+                                            tripId: trip.tripId,
+                                            stopId: stopId
+                                        });
                                     }
                                 }
-                            });
-                        }
+                            }
+                        });
                     }
                 }
             });
@@ -875,8 +874,11 @@ class SubwayDisplay {
                 .sort((a, b) => a.minutes - b.minutes)
                 .slice(0, 4);
             
+            console.log(`✅ Found ${this.trains.length} uptown A trains`);
+            
             // If no trains found, show message
             if (this.trains.length === 0) {
+                console.warn('⚠️ No uptown A trains found in feed');
                 this.trains = [
                     { minutes: null, destination: 'NO TRAINS', tripId: null }
                 ];
