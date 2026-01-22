@@ -257,41 +257,29 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // === WEATHER LAYOUT - GUARANTEED FIT (Text = 7px tall) ===
+        // === WEATHER LAYOUT - NO OVERLAP (Text = 7px tall, needs 7 rows spacing) ===
         
-        // Row 0: NYC label (rows 0-6)
+        // Rows 0-6: NYC + Temperature + Icon
         this.matrix.drawText('NYC', 48, 0, 100, 180, 255);
+        this.drawWeatherIcon(weatherInfo.icon, 2, 1, weatherInfo.colors, 0.7);
         
-        // Rows 2-9: Weather icon (8x8) on left
-        this.drawWeatherIcon(weatherInfo.icon, 2, 2, weatherInfo.colors, 0.8);
-        
-        // Rows 2-8: Temperature on right
         const tempStr = `${this.weather.temp}`;
-        const tempX = 15;
-        this.matrix.drawText(tempStr, tempX, 2, 255, 220, 180);
+        this.matrix.drawText(tempStr, 16, 1, 255, 220, 180);
+        const degreeX = 16 + (tempStr.length * 6);
+        this.drawDegreeSymbol(degreeX, 1, 255, 200, 150);
+        this.matrix.drawText('F', degreeX + 3, 1, 255, 200, 150);
         
-        // Degree symbol and F
-        const degreeX = tempX + (tempStr.length * 6);
-        this.drawDegreeSymbol(degreeX, 2, 255, 200, 150);
-        this.matrix.drawText('F', degreeX + 3, 2, 255, 200, 150);
-        
-        // Row 10: Divider
-        for (let x = 0; x < 64; x += 2) {
-            this.matrix.setPixel(x, 10, 80, 80, 120);
-        }
-        
-        // Rows 12-18: Condition text (centered)
+        // Rows 9-15: Condition (starts at 9, ends at 15)
         const conditionText = this.getShortCondition(this.weather.condition);
         const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
-        this.matrix.drawText(conditionText, Math.max(1, condX), 12, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        this.matrix.drawText(conditionText, Math.max(1, condX), 9, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Rows 20-26: Feels like
-        this.matrix.drawText('FEELS', 2, 20, 150, 170, 190);
+        // Rows 17-23: Feels like (starts at 17, ends at 23)
+        this.matrix.drawText('FEELS', 2, 17, 150, 170, 190);
         const feelsStr = `${this.weather.feelsLike}F`;
-        this.matrix.drawText(feelsStr, 38, 20, 200, 180, 160);
+        this.matrix.drawText(feelsStr, 38, 17, 200, 180, 160);
         
-        // Last row possible is 31 (31-6=25 start), rows 25-31: Humidity (ends at row 31)
-        // But text is 7 tall, so starting at 25 goes to 31 ✓
+        // Rows 25-31: Humidity (starts at 25, ends at 31 ✓)
         this.matrix.drawText('H', 2, 25, 100, 200, 255);
         const humStr = `${this.weather.humidity}%`;
         this.matrix.drawText(humStr, 12, 25, 150, 220, 255);
@@ -720,16 +708,17 @@ class MLBStandingsDisplay {
             return;
         }
 
-        // === MLB LAYOUT - GUARANTEED FIT (Text = 7px tall) ===
+        // === MLB LAYOUT - NO OVERLAP (Text = 7px tall, needs 7 rows minimum) ===
         
         // Rows 0-6: Title
         this.matrix.drawText('NL EAST', 14, 0, 255, 100, 100);
         
-        // Team standings - 5 teams with 4-5 rows spacing each
-        // Starting positions: 8, 12, 16, 20, 24 (last one ends at 30, within row 31)
-        const teamYPositions = [8, 12, 16, 20, 24]; // Text is 7px, so last ends at 30
+        // Only show top 4 teams to fit properly with no overlap
+        // Rows: 8-14, 15-21, 22-28, 29 would go to 35 (too far!)
+        // So we do: 8, 15, 22 for 3 teams OR tighter for 4
+        const teamYPositions = [8, 15, 22]; // Only 3 teams fit perfectly
         
-        this.standings.forEach((team, idx) => {
+        this.standings.slice(0, 3).forEach((team, idx) => {
             const y = teamYPositions[idx];
             
             const color = idx === 0 ? 
@@ -739,17 +728,15 @@ class MLBStandingsDisplay {
             // Team abbreviation (3 letters)
             this.matrix.drawText(team.name, 1, y, color.r, color.g, color.b);
             
-            // Wins (2-3 digits)
-            this.matrix.drawText(`${team.wins}`, 22, y, 100, 200, 255);
+            // Record format: W-L (compact)
+            const record = `${team.wins}-${team.losses}`;
+            this.matrix.drawText(record, 22, y, 150, 200, 255);
             
-            // Losses (2-3 digits)
-            this.matrix.drawText(`${team.losses}`, 40, y, 255, 150, 100);
-            
-            // Games back (only if not first place)
+            // Games back
             if (idx > 0 && team.gb !== '-' && team.gb !== '0.0') {
                 const gb = parseFloat(team.gb);
                 if (gb > 0) {
-                    this.matrix.drawText(`${team.gb}`, 54, y, 200, 200, 100);
+                    this.matrix.drawText(`GB${team.gb}`, 48, y, 255, 200, 100);
                 }
             }
         });
@@ -856,22 +843,18 @@ class SubwayDisplay {
             return;
         }
 
-        // === SUBWAY LAYOUT - GUARANTEED FIT (Text = 7px tall) ===
+        // === SUBWAY LAYOUT - NO OVERLAP (Text = 7px tall, needs 7 rows spacing) ===
         
         // Rows 0-6: Header
         this.matrix.drawText('A', 1, 0, 0, 100, 255);
         this.matrix.drawText('FULTON', 10, 0, 200, 200, 220);
         this.matrix.drawText('UP', 54, 0, 100, 255, 100);
         
-        // Divider at row 7
-        for (let x = 0; x < 64; x += 2) {
-            this.matrix.setPixel(x, 7, 100, 100, 150);
-        }
+        // Display next 3 trains with proper spacing (4 would overlap!)
+        // Rows: 9-15, 16-22, 23-29 (perfect fit!)
+        const trainYPositions = [9, 16, 23]; // 3 trains fit with no overlap
         
-        // Display next 4 trains - positions: 9, 14, 19, 24 (last ends at 30)
-        const trainYPositions = [9, 14, 19, 24]; // Text is 7px tall, last ends at 30 ✓
-        
-        this.trains.slice(0, 4).forEach((train, idx) => {
+        this.trains.slice(0, 3).forEach((train, idx) => {
             const y = trainYPositions[idx];
             
             // Color coding based on arrival time
@@ -889,10 +872,10 @@ class SubwayDisplay {
             
             // Minutes
             const minStr = train.minutes === 0 ? 'NOW' : `${train.minutes}M`;
-            this.matrix.drawText(minStr, 10, y, color.r, color.g, color.b);
+            this.matrix.drawText(minStr, 12, y, color.r, color.g, color.b);
             
             // Destination indicator
-            this.matrix.drawText('UP', 36, y, 180, 180, 200);
+            this.matrix.drawText('UP', 40, y, 180, 180, 200);
         });
         
         this.matrix.render();
