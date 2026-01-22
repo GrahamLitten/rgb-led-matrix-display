@@ -717,36 +717,36 @@ class MLBStandingsDisplay {
             return;
         }
 
-        // Title - smaller and centered
-        this.matrix.drawText('NL', 2, 1, 255, 100, 100);
-        this.matrix.drawText('EAST', 14, 1, 255, 100, 100);
+        // Title - compact
+        this.matrix.drawText('NL EAST', 14, 1, 255, 100, 100);
         
-        // Divider after title
-        for (let x = 0; x < 64; x += 3) {
-            this.matrix.setPixel(x, 8, 100, 100, 150);
-        }
+        // Team standings - very compact (rows 9-31 for 5 teams)
+        // Each team gets 4-5 rows spacing
+        const teamYPositions = [9, 13, 17, 21, 25]; // Ends at row 31
         
-        // Team standings - much more compact (2 rows per team = 10 rows for 5 teams)
-        let y = 10;
         this.standings.forEach((team, idx) => {
+            const y = teamYPositions[idx];
+            
             const color = idx === 0 ? 
                 { r: 100, g: 255, b: 100 } :  // First place - green
                 { r: 180, g: 180, b: 200 };    // Others - light gray
             
-            // Team name
-            this.matrix.drawText(team.name, 1, y, color.r, color.g, color.b);
+            // Team name (3 letters)
+            this.matrix.drawText(team.name, 2, y, color.r, color.g, color.b);
             
-            // Record (W-L format to save space)
-            const recordStr = `${team.wins}-${team.losses}`;
-            this.matrix.drawText(recordStr, 20, y, 150, 200, 255);
+            // Wins
+            this.matrix.drawText(`${team.wins}`, 24, y, 100, 200, 255);
             
-            // Games back (if not first place)
-            if (team.gb !== '-' && team.gb !== '0.0') {
-                const gbStr = team.gb;
-                this.matrix.drawText(gbStr, 48, y, 255, 180, 100);
+            // Dash separator
+            this.matrix.setPixel(35, y + 3, 150, 150, 150);
+            
+            // Losses
+            this.matrix.drawText(`${team.losses}`, 38, y, 255, 150, 100);
+            
+            // Games back (if not first)
+            if (team.gb !== '-' && team.gb !== '0.0' && parseFloat(team.gb) > 0) {
+                this.matrix.drawText(`${team.gb}`, 52, y, 255, 200, 100);
             }
-            
-            y += 4; // 2 rows spacing between teams (text is 7 rows tall, plus 4 = 11 per team, but with overlap)
         });
         
         this.matrix.render();
