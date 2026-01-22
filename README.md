@@ -45,25 +45,23 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 
 ### Screen 2: MLB NL East Standings
 **Layout (fits rows 0-31):**
-- Row 1-7: "NL EAST" title
-- Row 9: Header (TEAM W L)
-- Row 15: Divider
-- Rows 17-31: 5 teams (3 rows each)
-  - Team abbreviation (ATL, NYM, PHI, MIA, WSH)
-  - Wins (blue)
-  - Losses (orange)
-  - First place team in green
+- Rows 0-6: "NL EAST" title
+- Rows 8-14: Team 1 (first place in green)
+- Rows 15-21: Team 2
+- Rows 22-28: Team 3
+  - Format: [TEAM] [W-L] [GB#]
+  - Shows top 3 teams only (proper spacing requires 7 rows minimum per line)
 
 **Data Source:** MLB Stats API (real-time standings)
 
 ### Screen 3: Subway A Train Departures
 **Layout (fits rows 0-31):**
-- Row 1: "A FULTON" header with "UP" indicator
-- Row 8: Divider
-- Rows 10-31: Next 4 trains (5 rows each)
-  - Train number (1-4)
-  - Minutes until arrival
-  - Destination indicator
+- Rows 0-6: "A FULTON" header with "UP" indicator
+- Rows 9-15: Train 1
+- Rows 16-22: Train 2
+- Rows 23-29: Train 3
+  - Format: [#] [TIME] [UP]
+  - Shows next 3 trains (proper spacing requires 7 rows minimum per line)
   
 **Color Coding:**
 - Red: Arriving now (0-1 min)
@@ -72,6 +70,14 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 
 **Station:** Fulton Street (Uptown A trains)
 **Note:** Currently uses mock data for demo. Live MTA data integration ready for API key.
+
+## 📏 Technical Details
+
+**Display Constraints:**
+- Matrix size: 64 columns × 32 rows
+- Font size: 5×7 pixels per character
+- Minimum spacing: 7 rows between text lines to prevent overlap
+- Maximum displayable lines: 4 full lines of text with spacing
 
 ## 🛠️ Hardware
 
