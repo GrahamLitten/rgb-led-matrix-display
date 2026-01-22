@@ -149,12 +149,21 @@ class WeatherDisplay {
             const response = await fetch('https://wttr.in/10038?format=j1');
             const data = await response.json();
             
+            // Get current hour
+            const currentHour = new Date().getHours();
+            
+            // Get forecasts for 3, 6, and 12 hours from now
+            const forecasts = this.getForecastData(data, currentHour);
+            
             this.weather = {
                 temp: Math.round(data.current_condition[0].temp_F),
                 condition: data.current_condition[0].weatherDesc[0].value,
                 humidity: data.current_condition[0].humidity,
                 feelsLike: Math.round(data.current_condition[0].FeelsLikeF),
-                weatherCode: data.current_condition[0].weatherCode
+                weatherCode: data.current_condition[0].weatherCode,
+                forecast3hr: forecasts.hour3,
+                forecast6hr: forecasts.hour6,
+                forecast12hr: forecasts.hour12
             };
             
             this.updateInfoPanel();
@@ -166,20 +175,80 @@ class WeatherDisplay {
                 condition: 'Error',
                 humidity: '--',
                 feelsLike: '--',
-                weatherCode: '113'
+                weatherCode: '113',
+                forecast3hr: null,
+                forecast6hr: null,
+                forecast12hr: null
             };
             return false;
         }
     }
 
+    getForecastData(data, currentHour) {
+        const hourly = [];
+        
+        // Combine today and tomorrow's hourly data
+        if (data.weather && data.weather.length > 0) {
+            data.weather.forEach(day => {
+                if (day.hourly) {
+                    day.hourly.forEach(hour => {
+                        hourly.push({
+                            time: parseInt(hour.time) / 100,
+                            temp: Math.round(hour.tempF),
+                            weatherCode: hour.weatherCode,
+                            condition: hour.weatherDesc[0].value
+                        });
+                    });
+                }
+            });
+        }
+        
+        // Find forecasts for 3, 6, and 12 hours ahead
+        const target3 = (currentHour + 3) % 24;
+        const target6 = (currentHour + 6) % 24;
+        const target12 = (currentHour + 12) % 24;
+        
+        return {
+            hour3: this.findClosestForecast(hourly, target3, currentHour, 3),
+            hour6: this.findClosestForecast(hourly, target6, currentHour, 6),
+            hour12: this.findClosestForecast(hourly, target12, currentHour, 12)
+        };
+    }
+
+    findClosestForecast(hourly, targetHour, currentHour, hoursAhead) {
+        // Get the appropriate forecast based on hours ahead
+        const adjustedIndex = Math.floor(hoursAhead / 3); // 3-hour intervals in API
+        
+        if (adjustedIndex < hourly.length) {
+            return hourly[adjustedIndex];
+        }
+        
+        // Fallback: find by target hour
+        const forecast = hourly.find(h => h.time === targetHour);
+        return forecast || (hourly.length > 0 ? hourly[0] : null);
+    }
+
     updateInfoPanel() {
         const infoDiv = document.getElementById('weatherInfo');
         if (this.weather) {
+            let forecastHTML = '';
+            if (this.weather.forecast3hr) {
+                forecastHTML = `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                        <p style="color: #8b9eff; font-weight: 600; margin-bottom: 10px;">📅 Forecast</p>
+                        <p><strong>+3 hours:</strong> ${this.weather.forecast3hr.temp}°F - ${this.weather.forecast3hr.condition}</p>
+                        <p><strong>+6 hours:</strong> ${this.weather.forecast6hr ? this.weather.forecast6hr.temp + '°F - ' + this.weather.forecast6hr.condition : 'N/A'}</p>
+                        <p><strong>+12 hours:</strong> ${this.weather.forecast12hr ? this.weather.forecast12hr.temp + '°F - ' + this.weather.forecast12hr.condition : 'N/A'}</p>
+                    </div>
+                `;
+            }
+            
             infoDiv.innerHTML = `
                 <p><strong>Temperature:</strong> ${this.weather.temp}°F</p>
                 <p><strong>Feels Like:</strong> ${this.weather.feelsLike}°F</p>
                 <p><strong>Condition:</strong> ${this.weather.condition}</p>
                 <p><strong>Humidity:</strong> ${this.weather.humidity}%</p>
+                ${forecastHTML}
             `;
         }
     }
@@ -196,37 +265,84 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // Draw weather icon on the left (10x10 icon)
-        this.drawWeatherIcon(weatherInfo.icon, 2, 3, weatherInfo.colors);
+        // === TOP SECTION: Current Weather (Row 0-13) ===
         
-        // Draw temperature (large) - positioned after icon
+        // Draw "NYC" label in top left
+        this.matrix.drawText('NYC', 2, 1, 100, 180, 255);
+        
+        // Draw weather icon (smaller - 6x6 icon)
+        this.drawWeatherIcon(weatherInfo.icon, 20, 1, weatherInfo.colors, 0.6);
+        
+        // Draw temperature (large) - positioned right
         const tempStr = `${this.weather.temp}`;
-        const tempX = 16;
-        this.matrix.drawText(tempStr, tempX, 3, 255, 220, 180);
+        const tempX = 30;
+        this.matrix.drawText(tempStr, tempX, 2, 255, 220, 180);
         
         // Draw degree symbol and F
         const degreeX = tempX + (tempStr.length * 6);
-        this.drawDegreeSymbol(degreeX, 3, 255, 200, 150);
-        this.matrix.drawText('F', degreeX + 3, 3, 255, 200, 150);
+        this.drawDegreeSymbol(degreeX, 2, 255, 200, 150);
+        this.matrix.drawText('F', degreeX + 3, 2, 255, 200, 150);
         
-        // Draw "NYC" label in top right corner
-        this.matrix.drawText('NYC', 46, 1, 100, 180, 255);
+        // Draw condition text (compact)
+        const conditionText = this.getShortCondition(this.weather.condition);
+        this.matrix.drawText(conditionText, 2, 11, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Draw divider line
+        // Draw divider line (thicker)
         for (let x = 0; x < 64; x++) {
-            this.matrix.setPixel(x, 15, 50, 50, 80);
+            this.matrix.setPixel(x, 17, 80, 80, 120);
+            this.matrix.setPixel(x, 18, 50, 50, 80);
         }
         
-        // Draw condition text on bottom half - ensure it fits
-        const conditionText = this.getShortCondition(this.weather.condition);
-        const textWidth = conditionText.length * 6;
-        const condX = textWidth > 62 ? 1 : Math.floor((64 - textWidth) / 2);
-        this.matrix.drawText(conditionText, condX, 18, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        // === BOTTOM SECTION: Forecast Timeline (Row 19-31) ===
         
-        // Draw humidity indicator - more compact
-        this.drawHumidityBar(1, 27, this.weather.humidity);
+        // Draw "FORECAST" label
+        this.matrix.drawText('NEXT', 1, 20, 150, 170, 200);
+        
+        // Draw forecast boxes for 3hr, 6hr, 12hr
+        if (this.weather.forecast3hr) {
+            this.drawForecastBox(1, 26, '3H', this.weather.forecast3hr);
+        }
+        if (this.weather.forecast6hr) {
+            this.drawForecastBox(22, 26, '6H', this.weather.forecast6hr);
+        }
+        if (this.weather.forecast12hr) {
+            this.drawForecastBox(43, 26, '12', this.weather.forecast12hr);
+        }
         
         this.matrix.render();
+    }
+
+    drawForecastBox(x, y, label, forecast) {
+        const weatherInfo = this.getWeatherInfo(forecast.weatherCode, forecast.condition);
+        
+        // Draw time label (small)
+        this.matrix.drawText(label, x, y - 5, 120, 140, 180);
+        
+        // Draw mini weather icon (4x4)
+        this.drawMiniWeatherIcon(weatherInfo.icon, x + 1, y, weatherInfo.colors);
+        
+        // Draw temperature below icon
+        const temp = `${forecast.temp}`;
+        const tempWidth = temp.length * 6;
+        const tempX = x + Math.floor((10 - tempWidth) / 2);
+        this.matrix.drawText(temp, tempX, y + 4, 255, 200, 150);
+    }
+
+    drawMiniWeatherIcon(iconData, x, y, colors) {
+        // Draw a 4x4 simplified version of the icon
+        for (let row = 0; row < 4; row++) {
+            for (let col = 0; col < 4; col++) {
+                const sourceRow = Math.floor(row * 2.5);
+                const sourceCol = Math.floor(col * 2.5);
+                if (sourceRow < iconData.length && sourceCol < iconData[sourceRow].length) {
+                    const pixel = iconData[sourceRow][sourceCol];
+                    if (pixel > 0 && colors[pixel - 1]) {
+                        const color = colors[pixel - 1];
+                        this.matrix.setPixel(x + col, y + row, color.r, color.g, color.b);
+                    }
+                }
+            }
+        }
     }
 
     drawDegreeSymbol(x, y, r, g, b) {
@@ -237,36 +353,29 @@ class WeatherDisplay {
         this.matrix.setPixel(x + 1, y + 1, r, g, b);
     }
 
-    drawHumidityBar(x, y, humidity) {
-        // Draw humidity label
-        this.matrix.drawText('H', x, y, 100, 200, 255);
+    drawHumidityIndicator(x, y, humidity) {
+        // Compact humidity indicator with droplet icon
+        // Draw water droplet pixels
+        this.matrix.setPixel(x + 1, y, 100, 180, 255);
+        this.matrix.setPixel(x, y + 1, 100, 180, 255);
+        this.matrix.setPixel(x + 1, y + 1, 150, 220, 255);
+        this.matrix.setPixel(x + 2, y + 1, 100, 180, 255);
+        this.matrix.setPixel(x + 1, y + 2, 100, 180, 255);
         
-        // Draw humidity percentage bar - more compact
-        const barWidth = Math.floor((humidity / 100) * 28);
-        const barStartX = x + 7;
-        
-        for (let i = 0; i < 28; i++) {
-            const color = i < barWidth ? 
-                { r: 50, g: 150 + i * 3, b: 255 } : 
-                { r: 20, g: 20, b: 40 };
-            
-            this.matrix.setPixel(barStartX + i, y + 1, color.r, color.g, color.b);
-            this.matrix.setPixel(barStartX + i, y + 2, color.r, color.g, color.b);
-        }
-        
-        // Draw percentage text - fits within 64 pixels
-        const humidityText = `${humidity}%`;
-        const textX = Math.min(barStartX + 30, 64 - (humidityText.length * 6) - 1);
-        this.matrix.drawText(humidityText, textX, y, 150, 220, 255);
+        // Draw percentage
+        const humText = `${humidity}`;
+        this.matrix.drawText(humText, x + 4, y, 150, 220, 255);
     }
 
-    drawWeatherIcon(iconData, x, y, colors) {
+    drawWeatherIcon(iconData, x, y, colors, scale = 1.0) {
         for (let row = 0; row < iconData.length; row++) {
             for (let col = 0; col < iconData[row].length; col++) {
                 const pixel = iconData[row][col];
                 if (pixel > 0 && colors[pixel - 1]) {
                     const color = colors[pixel - 1];
-                    this.matrix.setPixel(x + col, y + row, color.r, color.g, color.b);
+                    const drawX = Math.floor(x + col * scale);
+                    const drawY = Math.floor(y + row * scale);
+                    this.matrix.setPixel(drawX, drawY, color.r, color.g, color.b);
                 }
             }
         }
