@@ -75,9 +75,11 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 
 **Display Constraints:**
 - Matrix size: 64 columns × 32 rows
-- Font size: 5×7 pixels per character
-- Minimum spacing: 7 rows between text lines to prevent overlap
-- Maximum displayable lines: 4 full lines of text with spacing
+- Font: Custom 3×5 pixel font (compact and readable)
+- Text height: 5 pixels per line
+- Line spacing: 1 blank row between lines (6 pixels total per line)
+- Maximum displayable lines: 5 lines with proper spacing
+- Character width: ~4 pixels per character (3px + 1px spacing)
 
 ## 🛠️ Hardware
 
