@@ -231,32 +231,22 @@ class WeatherDisplay {
     updateInfoPanel() {
         const infoDiv = document.getElementById('weatherInfo');
         if (this.weather) {
-            let forecastHTML = '';
-            if (this.weather.forecast3hr) {
-                forecastHTML = `
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-                        <p style="color: #8b9eff; font-weight: 600; margin-bottom: 10px;">📅 Forecast</p>
-                        <p><strong>+3 hours:</strong> ${this.weather.forecast3hr.temp}°F - ${this.weather.forecast3hr.condition}</p>
-                        <p><strong>+6 hours:</strong> ${this.weather.forecast6hr ? this.weather.forecast6hr.temp + '°F - ' + this.weather.forecast6hr.condition : 'N/A'}</p>
-                        <p><strong>+12 hours:</strong> ${this.weather.forecast12hr ? this.weather.forecast12hr.temp + '°F - ' + this.weather.forecast12hr.condition : 'N/A'}</p>
-                    </div>
-                `;
-            }
-            
             infoDiv.innerHTML = `
+                <p><strong>Location:</strong> NYC (10038)</p>
                 <p><strong>Temperature:</strong> ${this.weather.temp}°F</p>
                 <p><strong>Feels Like:</strong> ${this.weather.feelsLike}°F</p>
                 <p><strong>Condition:</strong> ${this.weather.condition}</p>
                 <p><strong>Humidity:</strong> ${this.weather.humidity}%</p>
-                ${forecastHTML}
+                <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">
+                    <strong>Data Source:</strong> wttr.in API<br>
+                    Note: Temperature may differ from other sources due to weather station location and update timing.
+                </p>
             `;
         }
     }
 
     render() {
         this.matrix.clear();
-        
-        // Grid guides removed - now shown outside matrix on webpage
         
         if (!this.weather) {
             this.matrix.drawText('LOADING', 8, 12, 255, 255, 0);
@@ -267,64 +257,42 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // === TOP SECTION: Current Weather (Row 1-14) ===
+        // === CLEAN & ELEGANT LAYOUT ===
         
-        // Draw "NYC" label in top left (row 1-7)
-        this.matrix.drawText('NYC', 2, 1, 100, 180, 255);
+        // Draw large weather icon (10x10) on the left
+        this.drawWeatherIcon(weatherInfo.icon, 3, 3, weatherInfo.colors, 1.0);
         
-        // Draw weather icon at 6x6 scaled (row 2-7)
-        this.drawWeatherIcon(weatherInfo.icon, 18, 2, weatherInfo.colors, 0.6);
-        
-        // Draw temperature (row 2-8)
+        // Draw temperature (large) on the right
         const tempStr = `${this.weather.temp}`;
-        const tempX = 28;
-        this.matrix.drawText(tempStr, tempX, 2, 255, 220, 180);
+        const tempX = 18;
+        this.matrix.drawText(tempStr, tempX, 4, 255, 220, 180);
         
         // Draw degree symbol and F
         const degreeX = tempX + (tempStr.length * 6);
-        this.drawDegreeSymbol(degreeX, 2, 255, 200, 150);
-        this.matrix.drawText('F', degreeX + 3, 2, 255, 200, 150);
+        this.drawDegreeSymbol(degreeX, 4, 255, 200, 150);
+        this.matrix.drawText('F', degreeX + 3, 4, 255, 200, 150);
         
-        // Draw condition text (row 10-16)
-        const conditionText = this.getShortCondition(this.weather.condition);
-        const condX = Math.min(2, 64 - (conditionText.length * 6) - 1);
-        this.matrix.drawText(conditionText, condX, 10, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        // Draw "NYC" in top right corner
+        this.matrix.drawText('NYC', 46, 1, 100, 180, 255);
         
-        // Draw divider line at row 17
+        // Draw elegant divider line
         for (let x = 0; x < 64; x++) {
-            this.matrix.setPixel(x, 17, 60, 60, 90);
+            if (x % 2 === 0) {
+                this.matrix.setPixel(x, 16, 80, 80, 120);
+            }
         }
         
-        // === BOTTOM SECTION: Forecast Timeline (Row 18-31) ===
+        // Draw condition text centered below divider
+        const conditionText = this.getShortCondition(this.weather.condition);
+        const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
+        this.matrix.drawText(conditionText, condX, 19, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Draw "NEXT" label (row 19-25)
-        this.matrix.drawText('NEXT', 1, 19, 140, 160, 190);
-        
-        // Draw forecast boxes - positioned to fit within rows 25-31
-        // Each forecast: label + temp on same line
-        if (this.weather.forecast3hr) {
-            this.drawCompactForecast(1, 25, '3H', this.weather.forecast3hr);
-        }
-        if (this.weather.forecast6hr) {
-            this.drawCompactForecast(22, 25, '6H', this.weather.forecast6hr);
-        }
-        if (this.weather.forecast12hr) {
-            this.drawCompactForecast(43, 25, '12', this.weather.forecast12hr);
-        }
+        // Draw "FEELS LIKE" and value
+        const feelsText = `FEELS ${this.weather.feelsLike}F`;
+        const feelsX = Math.floor((64 - (feelsText.length * 6)) / 2);
+        this.matrix.drawText(feelsText, feelsX, 27, 200, 180, 160);
         
         this.matrix.render();
-    }
-
-    drawCompactForecast(x, y, label, forecast) {
-        // All on one line to fit in remaining 7 pixels (row 25-31)
-        const weatherInfo = this.getWeatherInfo(forecast.weatherCode, forecast.condition);
-        
-        // Draw label
-        this.matrix.drawText(label, x, y, 120, 140, 180);
-        
-        // Draw temperature (shifted right from label)
-        const temp = `${forecast.temp}`;
-        this.matrix.drawText(temp, x + 13, y, 255, 200, 150);
     }
 
     drawGridGuides() {
