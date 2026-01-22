@@ -813,8 +813,9 @@ class SubwayDisplay {
             // Parse the GTFS-realtime feed
             const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(uint8Array);
             
-            // Fulton Street northbound stop ID for A train
-            const FULTON_STOP_ID = 'A27N'; // Broadway-Nassau/Fulton St northbound
+            // Fulton Street northbound stop IDs for A train
+            // A train at Fulton St has multiple stop IDs, try them all
+            const FULTON_STOP_IDS = ['A38N', 'A38', 'A27N', 'A27']; // Broadway-Nassau/Fulton St variants
             
             const aTrains = [];
             const now = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
@@ -825,27 +826,46 @@ class SubwayDisplay {
                     const trip = entity.tripUpdate.trip;
                     const stopTimeUpdates = entity.tripUpdate.stopTimeUpdate;
                     
-                    // Check if this is an A train going uptown
+                    // Check if this is an A train
                     if (trip.routeId === 'A') {
-                        stopTimeUpdates.forEach(stopTime => {
-                            // Check if this stop is Fulton Street
-                            if (stopTime.stopId === FULTON_STOP_ID) {
-                                const arrivalTime = stopTime.arrival?.time?.low || stopTime.departure?.time?.low;
+                        // Check direction - we want northbound only (trip IDs ending in N or containing northbound indicators)
+                        const isNorthbound = trip.tripId && (
+                            trip.tripId.includes('..N') || 
+                            trip.tripId.includes('.N.') ||
+                            trip.direction === 0 // 0 = one direction, 1 = opposite
+                        );
+                        
+                        if (isNorthbound || !trip.direction) { // If no direction, check all
+                            stopTimeUpdates.forEach(stopTime => {
+                                // Check if this stop is Fulton Street (try multiple IDs)
+                                const stopIdMatch = FULTON_STOP_IDS.some(id => 
+                                    stopTime.stopId === id || stopTime.stopId?.startsWith(id)
+                                );
                                 
-                                if (arrivalTime) {
-                                    const minutesAway = Math.floor((arrivalTime - now) / 60);
+                                if (stopIdMatch) {
+                                    // Try multiple time fields
+                                    const arrivalTime = 
+                                        stopTime.arrival?.time?.low || 
+                                        stopTime.arrival?.time ||
+                                        stopTime.departure?.time?.low || 
+                                        stopTime.departure?.time;
                                     
-                                    // Only include trains arriving in the next 30 minutes
-                                    if (minutesAway >= 0 && minutesAway < 30) {
-                                        aTrains.push({
-                                            minutes: minutesAway,
-                                            destination: 'UPTOWN',
-                                            tripId: trip.tripId
-                                        });
+                                    if (arrivalTime) {
+                                        const minutesAway = Math.floor((arrivalTime - now) / 60);
+                                        
+                                        // Only include trains arriving in the next 30 minutes
+                                        if (minutesAway >= 0 && minutesAway < 30) {
+                                            aTrains.push({
+                                                minutes: minutesAway,
+                                                destination: 'UPTOWN',
+                                                tripId: trip.tripId,
+                                                stopId: stopTime.stopId
+                                            });
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 }
             });
@@ -890,7 +910,10 @@ class SubwayDisplay {
                     html += `<p><strong>${idx + 1}.</strong> ${timeStr} - ${train.destination}</p>`;
                 }
             });
-            html += '<p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">✓ Live data from MTA GTFS-realtime feed<br>Station: Broadway-Nassau/Fulton St (A27N)</p>';
+            const stopInfo = this.trains.length > 0 && this.trains[0].stopId ? 
+                `Stop ID: ${this.trains[0].stopId}` : 
+                'Checking multiple stop IDs';
+            html += `<p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">✓ Live MTA GTFS-realtime feed<br>Station: Fulton St<br>${stopInfo}<br>Found ${this.trains.length} train(s)</p>`;
             infoDiv.innerHTML = html;
         } else {
             infoDiv.innerHTML = '<p>Loading subway data...</p>';
