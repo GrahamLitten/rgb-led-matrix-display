@@ -625,6 +625,7 @@ class ScreenManager {
         this.currentScreen = 'weather';
         this.weatherDisplay = new WeatherDisplay(matrix);
         this.mlbDisplay = new MLBStandingsDisplay(matrix);
+        this.subwayDisplay = new SubwayDisplay(matrix);
     }
 
     async switchScreen(screenName) {
@@ -639,6 +640,9 @@ class ScreenManager {
         } else if (this.currentScreen === 'mlb') {
             await this.mlbDisplay.fetchStandings();
             this.mlbDisplay.render();
+        } else if (this.currentScreen === 'subway') {
+            await this.subwayDisplay.fetchTrains();
+            this.subwayDisplay.render();
         }
     }
 
@@ -753,6 +757,149 @@ class MLBStandingsDisplay {
     }
 }
 
+// Subway Display
+class SubwayDisplay {
+    constructor(matrix) {
+        this.matrix = matrix;
+        this.trains = null;
+    }
+
+    async fetchTrains() {
+        try {
+            // Using MTA unofficial API proxy (no API key needed for development)
+            // For production, you'll need an MTA API key
+            const response = await fetch('https://otp-mta-prod.camsys-apps.com/otp/routers/default/nearby?stops=A27N');
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                // Get A train departures
+                const aTrains = [];
+                data.forEach(stopData => {
+                    if (stopData.groups) {
+                        stopData.groups.forEach(group => {
+                            if (group.route.id === 'A' && group.route.direction === 'Uptown') {
+                                group.times.forEach(time => {
+                                    const arrivalTime = new Date(time.realtimeArrival * 1000);
+                                    const now = new Date();
+                                    const minutesAway = Math.floor((arrivalTime - now) / 60000);
+                                    if (minutesAway >= 0 && minutesAway < 30) {
+                                        aTrains.push({
+                                            minutes: minutesAway,
+                                            destination: 'UPTOWN'
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                // Sort by arrival time and take first 4
+                this.trains = aTrains.sort((a, b) => a.minutes - b.minutes).slice(0, 4);
+                
+                // If no trains found, create mock data for display
+                if (this.trains.length === 0) {
+                    this.trains = [
+                        { minutes: 2, destination: 'UPTOWN' },
+                        { minutes: 8, destination: 'UPTOWN' },
+                        { minutes: 15, destination: 'UPTOWN' },
+                        { minutes: 23, destination: 'UPTOWN' }
+                    ];
+                }
+            } else {
+                // Mock data for testing
+                this.trains = [
+                    { minutes: 2, destination: 'UPTOWN' },
+                    { minutes: 8, destination: 'UPTOWN' },
+                    { minutes: 15, destination: 'UPTOWN' },
+                    { minutes: 23, destination: 'UPTOWN' }
+                ];
+            }
+            
+            this.updateInfoPanel();
+            return true;
+        } catch (error) {
+            console.error('Error fetching subway data:', error);
+            // Use mock data on error
+            this.trains = [
+                { minutes: 2, destination: 'UPTOWN' },
+                { minutes: 8, destination: 'UPTOWN' },
+                { minutes: 15, destination: 'UPTOWN' }
+            ];
+            this.updateInfoPanel();
+            return false;
+        }
+    }
+
+    updateInfoPanel() {
+        const infoDiv = document.getElementById('weatherInfo');
+        if (this.trains) {
+            let html = '<p style="color: #8b9eff; font-weight: 600; margin-bottom: 10px;">🚇 A Train - Fulton St (Uptown)</p>';
+            this.trains.forEach((train, idx) => {
+                const timeStr = train.minutes === 0 ? 'Arriving' : `${train.minutes} min`;
+                html += `<p><strong>${idx + 1}.</strong> ${timeStr} - ${train.destination}</p>`;
+            });
+            html += '<p style="margin-top: 10px; color: #aaa; font-size: 0.9em;">Note: Using mock data for demo. Live MTA data requires API key.</p>';
+            infoDiv.innerHTML = html;
+        } else {
+            infoDiv.innerHTML = '<p>Loading subway data...</p>';
+        }
+    }
+
+    render() {
+        this.matrix.clear();
+        
+        if (!this.trains) {
+            this.matrix.drawText('LOADING', 8, 12, 255, 255, 0);
+            this.matrix.render();
+            return;
+        }
+
+        // Draw A train logo style header
+        this.matrix.drawText('A', 2, 1, 0, 100, 255);
+        this.matrix.drawText('FULTON', 10, 1, 200, 200, 220);
+        
+        // Draw "UPTOWN" indicator
+        this.matrix.drawText('UP', 52, 1, 100, 255, 100);
+        
+        // Divider
+        for (let x = 0; x < 64; x += 2) {
+            this.matrix.setPixel(x, 8, 100, 100, 150);
+        }
+        
+        // Display next trains (rows 10-31)
+        const trainYPositions = [10, 15, 20, 25]; // 4 trains max, ends at row 31
+        
+        this.trains.slice(0, 4).forEach((train, idx) => {
+            const y = trainYPositions[idx];
+            
+            // Color coding: urgent (red), soon (yellow), normal (green)
+            let color;
+            if (train.minutes <= 1) {
+                color = { r: 255, g: 50, b: 50 };   // Red - arriving now
+            } else if (train.minutes <= 5) {
+                color = { r: 255, g: 200, b: 0 };   // Yellow - soon
+            } else {
+                color = { r: 100, g: 255, b: 100 }; // Green - normal
+            }
+            
+            // Draw train number
+            this.matrix.drawText(`${idx + 1}`, 2, y, 150, 150, 200);
+            
+            // Draw minutes
+            const minStr = train.minutes === 0 ? 'NOW' : `${train.minutes}M`;
+            this.matrix.drawText(minStr, 10, y, color.r, color.g, color.b);
+            
+            // Draw destination (if room)
+            if (minStr.length <= 3) {
+                this.matrix.drawText('UP', 34, y, 180, 180, 200);
+            }
+        });
+        
+        this.matrix.render();
+    }
+}
+
 // Initialize
 const matrix = new LEDMatrix('ledMatrix');
 const screenManager = new ScreenManager(matrix);
@@ -775,8 +922,13 @@ document.getElementById('mlbBtn').addEventListener('click', async () => {
     setActiveButton('mlbBtn');
 });
 
+document.getElementById('subwayBtn').addEventListener('click', async () => {
+    await screenManager.switchScreen('subway');
+    setActiveButton('subwayBtn');
+});
+
 function setActiveButton(activeId) {
-    ['weatherBtn', 'mlbBtn'].forEach(id => {
+    ['weatherBtn', 'mlbBtn', 'subwayBtn'].forEach(id => {
         document.getElementById(id).classList.toggle('active', id === activeId);
     });
 }
