@@ -829,25 +829,49 @@ class SubwayDisplay {
                     
                     // Get stop times
                     if (data.stopTimes && data.stopTimes.length > 0) {
-                        data.stopTimes.forEach(st => {
-                            // Filter for A train only, uptown direction
-                            const isATrain = st.trip?.route?.id === 'A';
-                            const isUptown = st.trip?.directionId === 0; // 0 = uptown/north, 1 = downtown/south
+                        console.log(`  ${data.stopTimes.length} stop times found`);
+                        
+                        data.stopTimes.forEach((st, idx) => {
+                            const route = st.trip?.route?.id;
+                            const directionId = st.trip?.directionId;
+                            const headsign = st.headsign || st.trip?.headsign;
+                            
+                            // Log first few for debugging
+                            if (idx < 3) {
+                                console.log(`  Train: Route=${route}, Dir=${directionId}, Headsign=${headsign}`);
+                            }
+                            
+                            // Filter for A train only
+                            const isATrain = route === 'A';
+                            
+                            // Try both direction values (0 or 1) and check headsign for "Inwood" (uptown terminal)
+                            const isUptownByHeadsign = headsign && (
+                                headsign.includes('Inwood') || 
+                                headsign.includes('207') ||
+                                headsign.includes('Uptown')
+                            );
+                            
+                            // Direction 0 or 1 might be uptown depending on feed, so check headsign primarily
+                            const isUptown = isUptownByHeadsign || directionId === 0;
                             
                             if (isATrain && isUptown && st.departure) {
                                 const departureTime = st.departure.time;
                                 const now = Math.floor(Date.now() / 1000);
                                 const minutesAway = Math.floor((departureTime - now) / 60);
                                 
+                                console.log(`  ✓ Found A train uptown: ${minutesAway} min`);
+                                
                                 if (minutesAway >= 0 && minutesAway < 30) {
                                     allStopTimes.push({
                                         minutes: minutesAway,
                                         destination: st.trip.destination?.name || 'UPTOWN',
-                                        headsign: st.headsign || 'Uptown'
+                                        headsign: headsign || 'Uptown'
                                     });
                                 }
                             }
                         });
+                    } else {
+                        console.log(`  No stop times for ${stopId}`);
                     }
                 } catch (err) {
                     console.log(`Stop ${stopId} not found, trying next...`);
