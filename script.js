@@ -816,11 +816,14 @@ class SubwayDisplay {
             for (const stopId of stopIds) {
                 try {
                     const url = `https://demo.transiter.dev/systems/us-ny-subway/stops/${stopId}`;
-                    const response = await fetch(url);
+                    // Use CORS proxy to bypass browser restrictions
+                    const proxiedUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                    const response = await fetch(proxiedUrl);
                     
                     if (!response.ok) continue;
                     
-                    const data = await response.json();
+                    const proxyData = await response.json();
+                    const data = JSON.parse(proxyData.contents);
                     
                     console.log(`Stop ${stopId}: ${data.name || 'Unknown'}`);
                     
