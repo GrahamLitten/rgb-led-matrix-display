@@ -68,8 +68,9 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 - Yellow: Arriving soon (2-5 min)
 - Green: Normal arrival (6+ min)
 
-**Station:** Fulton Street (Uptown A trains)
-**Note:** Currently uses mock data for demo. Live MTA data integration ready for API key.
+**Station:** Broadway-Nassau/Fulton Street (Stop ID: A27N)
+**Data Source:** Live MTA GTFS-realtime feed - https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace
+**Update Frequency:** Real-time updates every refresh (auto-refreshes every 10 minutes)
 
 ## 📏 Technical Details
 
