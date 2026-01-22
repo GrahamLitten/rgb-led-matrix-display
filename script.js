@@ -717,36 +717,36 @@ class MLBStandingsDisplay {
             return;
         }
 
-        // Title
-        this.matrix.drawText('NL EAST', 12, 1, 255, 100, 100);
+        // Title - smaller and centered
+        this.matrix.drawText('NL', 2, 1, 255, 100, 100);
+        this.matrix.drawText('EAST', 14, 1, 255, 100, 100);
         
-        // Header
-        this.matrix.drawText('TEAM W  L', 2, 9, 150, 150, 200);
-        
-        // Divider
-        for (let x = 0; x < 64; x += 2) {
-            this.matrix.setPixel(x, 15, 100, 100, 150);
+        // Divider after title
+        for (let x = 0; x < 64; x += 3) {
+            this.matrix.setPixel(x, 8, 100, 100, 150);
         }
         
-        // Team standings (5 teams, 3 rows each)
-        let y = 17;
+        // Team standings - much more compact (2 rows per team = 10 rows for 5 teams)
+        let y = 10;
         this.standings.forEach((team, idx) => {
             const color = idx === 0 ? 
                 { r: 100, g: 255, b: 100 } :  // First place - green
-                { r: 200, g: 200, b: 220 };    // Others - gray
+                { r: 180, g: 180, b: 200 };    // Others - light gray
             
-            // Team abbreviation
-            this.matrix.drawText(team.name, 2, y, color.r, color.g, color.b);
+            // Team name
+            this.matrix.drawText(team.name, 1, y, color.r, color.g, color.b);
             
-            // Wins
-            const winsStr = `${team.wins}`;
-            this.matrix.drawText(winsStr, 22, y, 100, 200, 255);
+            // Record (W-L format to save space)
+            const recordStr = `${team.wins}-${team.losses}`;
+            this.matrix.drawText(recordStr, 20, y, 150, 200, 255);
             
-            // Losses
-            const lossStr = `${team.losses}`;
-            this.matrix.drawText(lossStr, 38, y, 255, 150, 100);
+            // Games back (if not first place)
+            if (team.gb !== '-' && team.gb !== '0.0') {
+                const gbStr = team.gb;
+                this.matrix.drawText(gbStr, 48, y, 255, 180, 100);
+            }
             
-            y += 3; // Space between teams - only goes to row 29
+            y += 4; // 2 rows spacing between teams (text is 7 rows tall, plus 4 = 11 per team, but with overlap)
         });
         
         this.matrix.render();
