@@ -59,9 +59,9 @@ class LEDMatrix {
         }
     }
 
-    // Draw text on the matrix
+    // Draw text on the matrix with smaller 3x5 font
     drawText(text, x, y, r, g, b, scale = 1) {
-        const font = this.get5x7Font();
+        const font = this.get3x5Font();
         let currentX = x;
 
         for (let char of text.toUpperCase()) {
@@ -87,7 +87,52 @@ class LEDMatrix {
         }
     }
 
-    // Simple 5x7 pixel font
+    // Compact 3x5 pixel font for better fit
+    get3x5Font() {
+        return {
+            '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+            '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
+            '2': [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+            '3': [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+            '4': [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+            '5': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+            '6': [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+            '7': [[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
+            '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+            '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+            'A': [[0,1,0],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+            'B': [[1,1,0],[1,0,1],[1,1,0],[1,0,1],[1,1,0]],
+            'C': [[1,1,1],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+            'D': [[1,1,0],[1,0,1],[1,0,1],[1,0,1],[1,1,0]],
+            'E': [[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,1,1]],
+            'F': [[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,0,0]],
+            'G': [[1,1,1],[1,0,0],[1,0,1],[1,0,1],[1,1,1]],
+            'H': [[1,0,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+            'I': [[1,1,1],[0,1,0],[0,1,0],[0,1,0],[1,1,1]],
+            'J': [[0,0,1],[0,0,1],[0,0,1],[1,0,1],[1,1,1]],
+            'K': [[1,0,1],[1,0,1],[1,1,0],[1,0,1],[1,0,1]],
+            'L': [[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+            'M': [[1,0,1],[1,1,1],[1,0,1],[1,0,1],[1,0,1]],
+            'N': [[1,0,1],[1,1,1],[1,0,1],[1,0,1],[1,0,1]],
+            'O': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+            'P': [[1,1,1],[1,0,1],[1,1,1],[1,0,0],[1,0,0]],
+            'Q': [[1,1,1],[1,0,1],[1,0,1],[1,1,1],[0,0,1]],
+            'R': [[1,1,0],[1,0,1],[1,1,0],[1,0,1],[1,0,1]],
+            'S': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+            'T': [[1,1,1],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
+            'U': [[1,0,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+            'V': [[1,0,1],[1,0,1],[1,0,1],[1,0,1],[0,1,0]],
+            'W': [[1,0,1],[1,0,1],[1,0,1],[1,1,1],[1,0,1]],
+            'X': [[1,0,1],[1,0,1],[0,1,0],[1,0,1],[1,0,1]],
+            'Y': [[1,0,1],[1,0,1],[0,1,0],[0,1,0],[0,1,0]],
+            'Z': [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]],
+            ' ': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+            '-': [[0,0,0],[0,0,0],[1,1,1],[0,0,0],[0,0,0]],
+            '%': [[1,0,1],[0,0,1],[0,1,0],[1,0,0],[1,0,1]],
+        };
+    }
+
+    // Keep old font for reference
     get5x7Font() {
         return {
             '0': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
@@ -257,32 +302,34 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // === WEATHER LAYOUT - NO OVERLAP (Text = 7px tall, needs 7 rows spacing) ===
+        // === WEATHER LAYOUT - 3x5 font (5px tall) + 1 blank = 6px per line ===
         
-        // Rows 0-6: NYC + Temperature + Icon
-        this.matrix.drawText('NYC', 48, 0, 100, 180, 255);
-        this.drawWeatherIcon(weatherInfo.icon, 2, 1, weatherInfo.colors, 0.7);
+        // Row 0-4: NYC + Temperature (3x5 font = 5px tall)
+        this.matrix.drawText('NYC', 1, 0, 100, 180, 255);
         
-        const tempStr = `${this.weather.temp}`;
-        this.matrix.drawText(tempStr, 16, 1, 255, 220, 180);
-        const degreeX = 16 + (tempStr.length * 6);
-        this.drawDegreeSymbol(degreeX, 1, 255, 200, 150);
-        this.matrix.drawText('F', degreeX + 3, 1, 255, 200, 150);
+        const tempStr = `${this.weather.temp}F`;
+        this.matrix.drawText(tempStr, 18, 0, 255, 220, 180);
         
-        // Rows 9-15: Condition (starts at 9, ends at 15)
+        // Small weather icon
+        this.drawWeatherIcon(weatherInfo.icon, 38, 0, weatherInfo.colors, 0.5);
+        
+        // Row 6-10: Condition (1 blank row before)
         const conditionText = this.getShortCondition(this.weather.condition);
-        const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
-        this.matrix.drawText(conditionText, Math.max(1, condX), 9, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        const condX = Math.floor((64 - (conditionText.length * 4)) / 2);
+        this.matrix.drawText(conditionText, Math.max(1, condX), 6, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Rows 17-23: Feels like (starts at 17, ends at 23)
-        this.matrix.drawText('FEELS', 2, 17, 150, 170, 190);
+        // Row 12-16: Feels like (1 blank row before)
+        this.matrix.drawText('FEELS', 2, 12, 150, 170, 190);
         const feelsStr = `${this.weather.feelsLike}F`;
-        this.matrix.drawText(feelsStr, 38, 17, 200, 180, 160);
+        this.matrix.drawText(feelsStr, 26, 12, 200, 180, 160);
         
-        // Rows 25-31: Humidity (starts at 25, ends at 31 ✓)
-        this.matrix.drawText('H', 2, 25, 100, 200, 255);
+        // Row 18-22: Humidity (1 blank row before)
+        this.matrix.drawText('HUMIDITY', 2, 18, 100, 200, 255);
         const humStr = `${this.weather.humidity}%`;
-        this.matrix.drawText(humStr, 12, 25, 150, 220, 255);
+        this.matrix.drawText(humStr, 40, 18, 150, 220, 255);
+        
+        // Row 24-28: Condition detail (1 blank row before)
+        this.matrix.drawText(this.weather.condition.substring(0, 15).toUpperCase(), 2, 24, 180, 180, 200);
         
         this.matrix.render();
     }
@@ -708,35 +755,36 @@ class MLBStandingsDisplay {
             return;
         }
 
-        // === MLB LAYOUT - NO OVERLAP (Text = 7px tall, needs 7 rows minimum) ===
+        // === MLB LAYOUT - 3x5 font (5px tall) + 1 blank = 6px per line ===
         
-        // Rows 0-6: Title
-        this.matrix.drawText('NL EAST', 14, 0, 255, 100, 100);
+        // Row 0-4: Title
+        this.matrix.drawText('NL EAST', 22, 0, 255, 100, 100);
         
-        // Only show top 4 teams to fit properly with no overlap
-        // Rows: 8-14, 15-21, 22-28, 29 would go to 35 (too far!)
-        // So we do: 8, 15, 22 for 3 teams OR tighter for 4
-        const teamYPositions = [8, 15, 22]; // Only 3 teams fit perfectly
+        // Can fit 5 teams now with smaller font!
+        // Rows: 6, 12, 18, 24 (4 teams with 1 blank between)
+        const teamYPositions = [6, 12, 18, 24];
         
-        this.standings.slice(0, 3).forEach((team, idx) => {
+        this.standings.slice(0, 4).forEach((team, idx) => {
             const y = teamYPositions[idx];
             
             const color = idx === 0 ? 
                 { r: 100, g: 255, b: 100 } :  // First place - green
                 { r: 180, g: 180, b: 200 };    // Others - gray
             
-            // Team abbreviation (3 letters)
+            // Team abbreviation
             this.matrix.drawText(team.name, 1, y, color.r, color.g, color.b);
             
-            // Record format: W-L (compact)
-            const record = `${team.wins}-${team.losses}`;
-            this.matrix.drawText(record, 22, y, 150, 200, 255);
+            // Wins
+            this.matrix.drawText(`${team.wins}`, 18, y, 100, 200, 255);
+            
+            // Losses
+            this.matrix.drawText(`${team.losses}`, 32, y, 255, 150, 100);
             
             // Games back
             if (idx > 0 && team.gb !== '-' && team.gb !== '0.0') {
                 const gb = parseFloat(team.gb);
                 if (gb > 0) {
-                    this.matrix.drawText(`GB${team.gb}`, 48, y, 255, 200, 100);
+                    this.matrix.drawText(`${team.gb}`, 46, y, 200, 200, 100);
                 }
             }
         });
