@@ -8,6 +8,7 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 - **Multi-Screen System** - Switch between different display modes with elegant buttons
 - **Weather Display** - Live weather data for NYC (zip code 10038) with beautiful pixel art icons
 - **MLB Standings** - Real-time NL East standings from MLB Stats API
+- **Subway Times** - Uptown A train departures from Fulton Street station with color-coded urgency
 - **Perfect Fit** - All content guaranteed to fit within 32 rows and 64 columns
 - **Pixel Counter Guides** - Row and column markers outside the canvas for development
 - **Elegant Design** - Modern UI following best design practices
@@ -54,6 +55,23 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
   - First place team in green
 
 **Data Source:** MLB Stats API (real-time standings)
+
+### Screen 3: Subway A Train Departures
+**Layout (fits rows 0-31):**
+- Row 1: "A FULTON" header with "UP" indicator
+- Row 8: Divider
+- Rows 10-31: Next 4 trains (5 rows each)
+  - Train number (1-4)
+  - Minutes until arrival
+  - Destination indicator
+  
+**Color Coding:**
+- Red: Arriving now (0-1 min)
+- Yellow: Arriving soon (2-5 min)
+- Green: Normal arrival (6+ min)
+
+**Station:** Fulton Street (Uptown A trains)
+**Note:** Currently uses mock data for demo. Live MTA data integration ready for API key.
 
 ## 🛠️ Hardware
 
