@@ -844,15 +844,15 @@ class SubwayDisplay {
                             // Filter for A train only
                             const isATrain = route === 'A';
                             
-                            // Filter for uptown: must have "Uptown" in headsign AND NOT "Downtown"
-                            const isUptownByHeadsign = headsign && 
+                            // Filter for uptown: check headsign for "Uptown" and make sure NOT "Downtown"
+                            const hasUptownHeadsign = headsign && 
                                 headsign.includes('Uptown') && 
                                 !headsign.includes('Downtown');
                             
-                            // Also accept Dir=false (which appears to be uptown based on logs)
-                            const isUptown = isUptownByHeadsign && directionId === false;
+                            // Dir=false appears to be uptown based on logs
+                            const isUptown = hasUptownHeadsign || directionId === false;
                             
-                            if (isATrain && isUptown && st.departure) {
+                            if (isATrain && hasUptownHeadsign && st.departure) {
                                 const departureTime = st.departure.time;
                                 const now = Math.floor(Date.now() / 1000);
                                 const minutesAway = Math.floor((departureTime - now) / 60);
