@@ -257,40 +257,45 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // === CLEAN & ELEGANT LAYOUT ===
+        // === CLEAN & ELEGANT LAYOUT (Fits rows 0-31) ===
         
-        // Draw large weather icon (10x10) on the left
-        this.drawWeatherIcon(weatherInfo.icon, 3, 3, weatherInfo.colors, 1.0);
+        // Draw large weather icon (8x8) on the left - rows 2-9
+        this.drawWeatherIcon(weatherInfo.icon, 3, 2, weatherInfo.colors, 0.8);
         
-        // Draw temperature (large) on the right
+        // Draw temperature (large) on the right - rows 3-9
         const tempStr = `${this.weather.temp}`;
-        const tempX = 18;
-        this.matrix.drawText(tempStr, tempX, 4, 255, 220, 180);
+        const tempX = 16;
+        this.matrix.drawText(tempStr, tempX, 3, 255, 220, 180);
         
         // Draw degree symbol and F
         const degreeX = tempX + (tempStr.length * 6);
-        this.drawDegreeSymbol(degreeX, 4, 255, 200, 150);
-        this.matrix.drawText('F', degreeX + 3, 4, 255, 200, 150);
+        this.drawDegreeSymbol(degreeX, 3, 255, 200, 150);
+        this.matrix.drawText('F', degreeX + 3, 3, 255, 200, 150);
         
-        // Draw "NYC" in top right corner
+        // Draw "NYC" in top right corner - row 1
         this.matrix.drawText('NYC', 46, 1, 100, 180, 255);
         
-        // Draw elegant divider line
-        for (let x = 0; x < 64; x++) {
-            if (x % 2 === 0) {
-                this.matrix.setPixel(x, 16, 80, 80, 120);
-            }
-        }
-        
-        // Draw condition text centered below divider
+        // Draw condition text - rows 11-17
         const conditionText = this.getShortCondition(this.weather.condition);
         const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
-        this.matrix.drawText(conditionText, condX, 19, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        this.matrix.drawText(conditionText, condX, 11, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Draw "FEELS LIKE" and value
-        const feelsText = `FEELS ${this.weather.feelsLike}F`;
-        const feelsX = Math.floor((64 - (feelsText.length * 6)) / 2);
-        this.matrix.drawText(feelsText, feelsX, 27, 200, 180, 160);
+        // Draw elegant divider line - row 19
+        for (let x = 0; x < 64; x += 2) {
+            this.matrix.setPixel(x, 19, 80, 80, 120);
+        }
+        
+        // Draw "FEELS" label - rows 21-27
+        this.matrix.drawText('FEELS', 2, 21, 150, 170, 190);
+        
+        // Draw feels-like temp - rows 21-27
+        const feelsStr = `${this.weather.feelsLike}F`;
+        this.matrix.drawText(feelsStr, 38, 21, 200, 180, 160);
+        
+        // Draw humidity - rows 29-31 (last 3 rows)
+        this.matrix.drawText('H', 2, 29, 100, 200, 255);
+        const humStr = `${this.weather.humidity}%`;
+        this.matrix.drawText(humStr, 12, 29, 150, 220, 255);
         
         this.matrix.render();
     }
@@ -613,24 +618,172 @@ class WeatherDisplay {
     }
 }
 
+// Screen Manager
+class ScreenManager {
+    constructor(matrix) {
+        this.matrix = matrix;
+        this.currentScreen = 'weather';
+        this.weatherDisplay = new WeatherDisplay(matrix);
+        this.mlbDisplay = new MLBStandingsDisplay(matrix);
+    }
+
+    async switchScreen(screenName) {
+        this.currentScreen = screenName;
+        await this.render();
+    }
+
+    async render() {
+        if (this.currentScreen === 'weather') {
+            await this.weatherDisplay.fetchWeather();
+            this.weatherDisplay.render();
+        } else if (this.currentScreen === 'mlb') {
+            await this.mlbDisplay.fetchStandings();
+            this.mlbDisplay.render();
+        }
+    }
+
+    async update() {
+        await this.render();
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = 
+            `Last updated: ${now.toLocaleTimeString()}`;
+    }
+}
+
+// MLB Standings Display
+class MLBStandingsDisplay {
+    constructor(matrix) {
+        this.matrix = matrix;
+        this.standings = null;
+    }
+
+    async fetchStandings() {
+        try {
+            // Using MLB Stats API for NL East standings
+            const response = await fetch('https://statsapi.mlb.com/api/v1/standings?leagueId=104&season=2024&standingsTypes=regularSeason');
+            const data = await response.json();
+            
+            // Get NL East (division ID 204)
+            const nlEast = data.records.find(r => r.division.id === 204);
+            
+            if (nlEast) {
+                this.standings = nlEast.teamRecords.slice(0, 5).map(team => ({
+                    name: this.getTeamAbbr(team.team.name),
+                    wins: team.wins,
+                    losses: team.losses,
+                    gb: team.gamesBack
+                }));
+            }
+            
+            this.updateInfoPanel();
+            return true;
+        } catch (error) {
+            console.error('Error fetching MLB standings:', error);
+            this.standings = null;
+            return false;
+        }
+    }
+
+    getTeamAbbr(teamName) {
+        const abbrs = {
+            'Atlanta Braves': 'ATL',
+            'New York Mets': 'NYM',
+            'Philadelphia Phillies': 'PHI',
+            'Miami Marlins': 'MIA',
+            'Washington Nationals': 'WSH'
+        };
+        return abbrs[teamName] || teamName.substring(0, 3).toUpperCase();
+    }
+
+    updateInfoPanel() {
+        const infoDiv = document.getElementById('weatherInfo');
+        if (this.standings) {
+            let html = '<p style="color: #8b9eff; font-weight: 600; margin-bottom: 10px;">⚾ NL East Standings</p>';
+            this.standings.forEach((team, idx) => {
+                html += `<p><strong>${idx + 1}. ${team.name}:</strong> ${team.wins}-${team.losses} (GB: ${team.gb})</p>`;
+            });
+            infoDiv.innerHTML = html;
+        } else {
+            infoDiv.innerHTML = '<p>Loading MLB data...</p>';
+        }
+    }
+
+    render() {
+        this.matrix.clear();
+        
+        if (!this.standings) {
+            this.matrix.drawText('LOADING', 8, 12, 255, 255, 0);
+            this.matrix.render();
+            return;
+        }
+
+        // Title
+        this.matrix.drawText('NL EAST', 12, 1, 255, 100, 100);
+        
+        // Header
+        this.matrix.drawText('TEAM W  L', 2, 9, 150, 150, 200);
+        
+        // Divider
+        for (let x = 0; x < 64; x += 2) {
+            this.matrix.setPixel(x, 15, 100, 100, 150);
+        }
+        
+        // Team standings (5 teams, 3 rows each)
+        let y = 17;
+        this.standings.forEach((team, idx) => {
+            const color = idx === 0 ? 
+                { r: 100, g: 255, b: 100 } :  // First place - green
+                { r: 200, g: 200, b: 220 };    // Others - gray
+            
+            // Team abbreviation
+            this.matrix.drawText(team.name, 2, y, color.r, color.g, color.b);
+            
+            // Wins
+            const winsStr = `${team.wins}`;
+            this.matrix.drawText(winsStr, 22, y, 100, 200, 255);
+            
+            // Losses
+            const lossStr = `${team.losses}`;
+            this.matrix.drawText(lossStr, 38, y, 255, 150, 100);
+            
+            y += 3; // Space between teams - only goes to row 29
+        });
+        
+        this.matrix.render();
+    }
+}
+
 // Initialize
 const matrix = new LEDMatrix('ledMatrix');
-const weatherDisplay = new WeatherDisplay(matrix);
+const screenManager = new ScreenManager(matrix);
 
-async function updateWeather() {
-    await weatherDisplay.fetchWeather();
-    weatherDisplay.render();
-    
-    const now = new Date();
-    document.getElementById('lastUpdate').textContent = 
-        `Last updated: ${now.toLocaleTimeString()}`;
+async function updateDisplay() {
+    await screenManager.update();
 }
 
 // Event listeners
-document.getElementById('refreshBtn').addEventListener('click', updateWeather);
+document.getElementById('refreshBtn').addEventListener('click', updateDisplay);
+
+// Screen switching buttons
+document.getElementById('weatherBtn').addEventListener('click', async () => {
+    await screenManager.switchScreen('weather');
+    setActiveButton('weatherBtn');
+});
+
+document.getElementById('mlbBtn').addEventListener('click', async () => {
+    await screenManager.switchScreen('mlb');
+    setActiveButton('mlbBtn');
+});
+
+function setActiveButton(activeId) {
+    ['weatherBtn', 'mlbBtn'].forEach(id => {
+        document.getElementById(id).classList.toggle('active', id === activeId);
+    });
+}
 
 // Initial load
-updateWeather();
+updateDisplay();
+setActiveButton('weatherBtn');
 
 // Auto-refresh every 10 minutes
-setInterval(updateWeather, 10 * 60 * 1000);
+setInterval(updateDisplay, 10 * 60 * 1000);
