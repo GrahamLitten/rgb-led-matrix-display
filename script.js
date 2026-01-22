@@ -256,6 +256,9 @@ class WeatherDisplay {
     render() {
         this.matrix.clear();
         
+        // Optional: Draw grid guides (comment out in production)
+        this.drawGridGuides();
+        
         if (!this.weather) {
             this.matrix.drawText('LOADING', 8, 12, 255, 255, 0);
             this.matrix.render();
@@ -265,17 +268,17 @@ class WeatherDisplay {
         // Get weather icon and colors
         const weatherInfo = this.getWeatherInfo(this.weather.weatherCode, this.weather.condition);
         
-        // === TOP SECTION: Current Weather (Row 0-13) ===
+        // === TOP SECTION: Current Weather (Row 0-12) ===
         
         // Draw "NYC" label in top left
         this.matrix.drawText('NYC', 2, 1, 100, 180, 255);
         
         // Draw weather icon (smaller - 6x6 icon)
-        this.drawWeatherIcon(weatherInfo.icon, 20, 1, weatherInfo.colors, 0.6);
+        this.drawWeatherIcon(weatherInfo.icon, 18, 1, weatherInfo.colors, 0.6);
         
         // Draw temperature (large) - positioned right
         const tempStr = `${this.weather.temp}`;
-        const tempX = 30;
+        const tempX = 28;
         this.matrix.drawText(tempStr, tempX, 2, 255, 220, 180);
         
         // Draw degree symbol and F
@@ -285,55 +288,75 @@ class WeatherDisplay {
         
         // Draw condition text (compact)
         const conditionText = this.getShortCondition(this.weather.condition);
-        this.matrix.drawText(conditionText, 2, 11, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
+        this.matrix.drawText(conditionText, 2, 10, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Draw divider line (thicker)
+        // Draw divider line
         for (let x = 0; x < 64; x++) {
-            this.matrix.setPixel(x, 17, 80, 80, 120);
-            this.matrix.setPixel(x, 18, 50, 50, 80);
+            this.matrix.setPixel(x, 16, 60, 60, 90);
         }
         
-        // === BOTTOM SECTION: Forecast Timeline (Row 19-31) ===
+        // === BOTTOM SECTION: Forecast Timeline (Row 17-31) ===
         
-        // Draw "FORECAST" label
-        this.matrix.drawText('NEXT', 1, 20, 150, 170, 200);
+        // Draw "NEXT" label
+        this.matrix.drawText('NEXT', 1, 18, 140, 160, 190);
         
-        // Draw forecast boxes for 3hr, 6hr, 12hr
+        // Draw forecast boxes for 3hr, 6hr, 12hr (more compact)
         if (this.weather.forecast3hr) {
-            this.drawForecastBox(1, 26, '3H', this.weather.forecast3hr);
+            this.drawForecastBox(0, 24, '3H', this.weather.forecast3hr);
         }
         if (this.weather.forecast6hr) {
-            this.drawForecastBox(22, 26, '6H', this.weather.forecast6hr);
+            this.drawForecastBox(21, 24, '6H', this.weather.forecast6hr);
         }
         if (this.weather.forecast12hr) {
-            this.drawForecastBox(43, 26, '12', this.weather.forecast12hr);
+            this.drawForecastBox(42, 24, '12', this.weather.forecast12hr);
         }
         
         this.matrix.render();
     }
 
+    drawGridGuides() {
+        // Draw top edge markers (every 8 pixels)
+        for (let x = 0; x < 64; x += 8) {
+            this.matrix.setPixel(x, 0, 80, 0, 0);
+        }
+        
+        // Draw left edge markers (every 8 pixels)
+        for (let y = 0; y < 32; y += 8) {
+            this.matrix.setPixel(0, y, 80, 0, 0);
+        }
+        
+        // Draw bottom edge (row 31) in red to show boundary
+        for (let x = 0; x < 64; x++) {
+            this.matrix.setPixel(x, 31, 60, 0, 0);
+        }
+        
+        // Draw right edge (column 63) in red to show boundary
+        for (let y = 0; y < 32; y++) {
+            this.matrix.setPixel(63, y, 60, 0, 0);
+        }
+    }
+
     drawForecastBox(x, y, label, forecast) {
         const weatherInfo = this.getWeatherInfo(forecast.weatherCode, forecast.condition);
         
-        // Draw time label (small)
-        this.matrix.drawText(label, x, y - 5, 120, 140, 180);
+        // Draw time label (small) - y should be 24, label at 24 = row 24 (within bounds)
+        this.matrix.drawText(label, x + 1, y, 120, 140, 180);
         
-        // Draw mini weather icon (4x4)
-        this.drawMiniWeatherIcon(weatherInfo.icon, x + 1, y, weatherInfo.colors);
+        // Draw mini weather icon (3x3 even more compact)
+        this.drawMiniWeatherIcon(weatherInfo.icon, x + 9, y, weatherInfo.colors);
         
-        // Draw temperature below icon
+        // Draw temperature below icon - y+1 = row 25, text is 7 pixels tall, ends at 31 (within bounds)
         const temp = `${forecast.temp}`;
-        const tempWidth = temp.length * 6;
-        const tempX = x + Math.floor((10 - tempWidth) / 2);
-        this.matrix.drawText(temp, tempX, y + 4, 255, 200, 150);
+        const tempX = x + 13;
+        this.matrix.drawText(temp, tempX, y + 1, 255, 200, 150);
     }
 
     drawMiniWeatherIcon(iconData, x, y, colors) {
-        // Draw a 4x4 simplified version of the icon
-        for (let row = 0; row < 4; row++) {
-            for (let col = 0; col < 4; col++) {
-                const sourceRow = Math.floor(row * 2.5);
-                const sourceCol = Math.floor(col * 2.5);
+        // Draw a 3x3 ultra-compact version of the icon
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                const sourceRow = Math.floor(row * 3);
+                const sourceCol = Math.floor(col * 3);
                 if (sourceRow < iconData.length && sourceCol < iconData[sourceRow].length) {
                     const pixel = iconData[sourceRow][sourceCol];
                     if (pixel > 0 && colors[pixel - 1]) {
