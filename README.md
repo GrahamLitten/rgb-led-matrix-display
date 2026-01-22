@@ -68,9 +68,15 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 - Yellow: Arriving soon (2-5 min)
 - Green: Normal arrival (6+ min)
 
-**Station:** Broadway-Nassau/Fulton Street (Stop ID: A27N)
-**Data Source:** Live MTA GTFS-realtime feed - https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace
-**Update Frequency:** Real-time updates every refresh (auto-refreshes every 10 minutes)
+**Station:** Fulton Street (Uptown A train only)
+**Current Status:** Using representative mock data for testing/visualization
+**For Live Data:** See `MTA_INTEGRATION.md` for Raspberry Pi deployment guide
+
+⚠️ **Why Mock Data?**
+- MTA GTFS-realtime requires Protocol Buffer parsing (complex in browsers)
+- CORS restrictions prevent direct browser access
+- Needs backend server (Python/Node.js) for accurate real-time arrivals
+- Working examples: [SubwayBuddy](https://github.com/williamwinfree/subwaybuddy), [Arrivals Board](https://github.com/benarnav/arrivals-board)
 
 ## 📏 Technical Details
 
