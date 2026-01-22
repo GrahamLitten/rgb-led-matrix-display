@@ -5,14 +5,13 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 ## ✨ Features
 
 - **64x32 Full RGB LED Matrix Simulator** - Realistic LED glow effects with millions of colors
-- **Animated Weather Icons** - Beautiful pixel art icons for different weather conditions
-- **Real-time Weather Display** - Live weather data for NYC (zip code 10038)
-- **Hourly Forecast Timeline** - Shows weather predictions for +3hr, +6hr, and +12hr
-- **Elegant Two-Section Layout** - Current weather on top, forecast timeline below
-- **Compact Mini Icons** - Tiny weather icons for forecast boxes
-- **Smart Layout** - Everything fits perfectly within 64x32 pixels with no cutoff
+- **Multi-Screen System** - Switch between different display modes with elegant buttons
+- **Weather Display** - Live weather data for NYC (zip code 10038) with beautiful pixel art icons
+- **MLB Standings** - Real-time NL East standings from MLB Stats API
+- **Perfect Fit** - All content guaranteed to fit within 32 rows and 64 columns
+- **Pixel Counter Guides** - Row and column markers outside the canvas for development
 - **Elegant Design** - Modern UI following best design practices
-- **Auto-refresh** - Updates weather every 10 minutes automatically
+- **Auto-refresh** - Updates data every 10 minutes automatically
 - **GitHub Pages Deployment** - Test and share your display online
 
 ## Quick Start
@@ -27,34 +26,34 @@ A beautiful 64x32 RGB LED matrix display project for Raspberry Pi, with an elega
 - Add more display modes (clock, notifications, etc.)
 - Custom animations and transitions
 
-## 🎨 Display Layout
+## 🎨 Display Screens
 
-### Top Section (Current Weather)
-- **NYC** label with location indicator
-- Weather icon (6x6 pixel art, scaled)
-- Large temperature display with °F indicator
-- Current condition text (e.g., "SUNNY", "OVRCAST")
+### Screen 1: Weather Display
+**Layout (fits rows 0-31):**
+- Row 1: NYC label (top right)
+- Rows 2-9: Large weather icon (8x8) + Temperature
+- Rows 11-17: Condition text (centered)
+- Row 19: Divider line
+- Rows 21-27: "FEELS" + feels-like temperature
+- Rows 29-31: Humidity indicator
 
-### Divider
-- Elegant gradient line separating sections
+**Colors:**
+- Weather icons: Condition-specific colors (yellows for sun, blues for rain, grays for clouds)
+- Temperature: Warm orange/peach tones
+- Text: Soft blues and purples
 
-### Bottom Section (Forecast Timeline)
-- **"NEXT"** label indicating forecast section
-- Three forecast boxes showing:
-  - **3H** - 3 hours ahead
-  - **6H** - 6 hours ahead  
-  - **12** - 12 hours ahead
-- Each box displays:
-  - Time label
-  - Mini weather icon (4x4 pixels)
-  - Predicted temperature
+### Screen 2: MLB NL East Standings
+**Layout (fits rows 0-31):**
+- Row 1-7: "NL EAST" title
+- Row 9: Header (TEAM W L)
+- Row 15: Divider
+- Rows 17-31: 5 teams (3 rows each)
+  - Team abbreviation (ATL, NYM, PHI, MIA, WSH)
+  - Wins (blue)
+  - Losses (orange)
+  - First place team in green
 
-### Color Design
-- Weather-specific color palettes
-- Full RGB spectrum with smooth gradients
-- Icon colors: yellows for sun, blues for rain, whites for snow, grays for clouds
-- Temperature in warm orange/peach tones
-- Forecast labels in soft blue/purple
+**Data Source:** MLB Stats API (real-time standings)
 
 ## 🛠️ Hardware
 
