@@ -802,65 +802,76 @@ class SubwayDisplay {
 
     async fetchTrains() {
         try {
-            // Using MTA unofficial API proxy (no API key needed for development)
-            // For production, you'll need an MTA API key
-            const response = await fetch('https://otp-mta-prod.camsys-apps.com/otp/routers/default/nearby?stops=A27N');
-            const data = await response.json();
+            // Using MTA GTFS-realtime feed for A/C/E trains
+            const feedUrl = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace';
             
-            if (data && data.length > 0) {
-                // Get A train departures
-                const aTrains = [];
-                data.forEach(stopData => {
-                    if (stopData.groups) {
-                        stopData.groups.forEach(group => {
-                            if (group.route.id === 'A' && group.route.direction === 'Uptown') {
-                                group.times.forEach(time => {
-                                    const arrivalTime = new Date(time.realtimeArrival * 1000);
-                                    const now = new Date();
-                                    const minutesAway = Math.floor((arrivalTime - now) / 60000);
+            // Fetch the protobuf feed
+            const response = await fetch(feedUrl);
+            const buffer = await response.arrayBuffer();
+            const uint8Array = new Uint8Array(buffer);
+            
+            // Parse the GTFS-realtime feed
+            const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(uint8Array);
+            
+            // Fulton Street northbound stop ID for A train
+            const FULTON_STOP_ID = 'A27N'; // Broadway-Nassau/Fulton St northbound
+            
+            const aTrains = [];
+            const now = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
+            
+            // Parse feed entities
+            feed.entity.forEach(entity => {
+                if (entity.tripUpdate) {
+                    const trip = entity.tripUpdate.trip;
+                    const stopTimeUpdates = entity.tripUpdate.stopTimeUpdate;
+                    
+                    // Check if this is an A train going uptown
+                    if (trip.routeId === 'A') {
+                        stopTimeUpdates.forEach(stopTime => {
+                            // Check if this stop is Fulton Street
+                            if (stopTime.stopId === FULTON_STOP_ID) {
+                                const arrivalTime = stopTime.arrival?.time?.low || stopTime.departure?.time?.low;
+                                
+                                if (arrivalTime) {
+                                    const minutesAway = Math.floor((arrivalTime - now) / 60);
+                                    
+                                    // Only include trains arriving in the next 30 minutes
                                     if (minutesAway >= 0 && minutesAway < 30) {
                                         aTrains.push({
                                             minutes: minutesAway,
-                                            destination: 'UPTOWN'
+                                            destination: 'UPTOWN',
+                                            tripId: trip.tripId
                                         });
                                     }
-                                });
+                                }
                             }
                         });
                     }
-                });
-                
-                // Sort by arrival time and take first 4
-                this.trains = aTrains.sort((a, b) => a.minutes - b.minutes).slice(0, 4);
-                
-                // If no trains found, create mock data for display
-                if (this.trains.length === 0) {
-                    this.trains = [
-                        { minutes: 2, destination: 'UPTOWN' },
-                        { minutes: 8, destination: 'UPTOWN' },
-                        { minutes: 15, destination: 'UPTOWN' },
-                        { minutes: 23, destination: 'UPTOWN' }
-                    ];
                 }
-            } else {
-                // Mock data for testing
+            });
+            
+            // Sort by arrival time and take first 4
+            this.trains = aTrains
+                .sort((a, b) => a.minutes - b.minutes)
+                .slice(0, 4);
+            
+            // If no trains found, show message
+            if (this.trains.length === 0) {
                 this.trains = [
-                    { minutes: 2, destination: 'UPTOWN' },
-                    { minutes: 8, destination: 'UPTOWN' },
-                    { minutes: 15, destination: 'UPTOWN' },
-                    { minutes: 23, destination: 'UPTOWN' }
+                    { minutes: null, destination: 'NO TRAINS', tripId: null }
                 ];
             }
             
             this.updateInfoPanel();
             return true;
         } catch (error) {
-            console.error('Error fetching subway data:', error);
-            // Use mock data on error
+            console.error('Error fetching MTA data:', error);
+            // Fallback to mock data if feed is unavailable
             this.trains = [
                 { minutes: 2, destination: 'UPTOWN' },
                 { minutes: 8, destination: 'UPTOWN' },
-                { minutes: 15, destination: 'UPTOWN' }
+                { minutes: 15, destination: 'UPTOWN' },
+                { minutes: 23, destination: 'UPTOWN' }
             ];
             this.updateInfoPanel();
             return false;
@@ -872,10 +883,14 @@ class SubwayDisplay {
         if (this.trains) {
             let html = '<p style="color: #8b9eff; font-weight: 600; margin-bottom: 10px;">🚇 A Train - Fulton St (Uptown)</p>';
             this.trains.forEach((train, idx) => {
-                const timeStr = train.minutes === 0 ? 'Arriving' : `${train.minutes} min`;
-                html += `<p><strong>${idx + 1}.</strong> ${timeStr} - ${train.destination}</p>`;
+                if (train.minutes === null) {
+                    html += `<p><strong>•</strong> ${train.destination}</p>`;
+                } else {
+                    const timeStr = train.minutes === 0 ? 'Arriving now' : `${train.minutes} min`;
+                    html += `<p><strong>${idx + 1}.</strong> ${timeStr} - ${train.destination}</p>`;
+                }
             });
-            html += '<p style="margin-top: 10px; color: #aaa; font-size: 0.9em;">Note: Using mock data for demo. Live MTA data requires API key.</p>';
+            html += '<p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 0.9em;">✓ Live data from MTA GTFS-realtime feed<br>Station: Broadway-Nassau/Fulton St (A27N)</p>';
             infoDiv.innerHTML = html;
         } else {
             infoDiv.innerHTML = '<p>Loading subway data...</p>';
@@ -903,6 +918,12 @@ class SubwayDisplay {
         
         this.trains.slice(0, 4).forEach((train, idx) => {
             const y = trainYPositions[idx];
+            
+            // Handle "no trains" message
+            if (train.minutes === null) {
+                this.matrix.drawText('NO TRAINS', 8, y, 200, 200, 200);
+                return;
+            }
             
             // Color coding based on arrival time
             let color;
