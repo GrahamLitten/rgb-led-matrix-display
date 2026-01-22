@@ -394,7 +394,7 @@ class WeatherDisplay {
     }
 
     drawDegreeSymbol(x, y, r, g, b) {
-        // Draw a small circle for degree symbol
+        // Draw a small dot for degree symbol (2x2)
         this.matrix.setPixel(x, y, r, g, b);
         this.matrix.setPixel(x + 1, y, r, g, b);
         this.matrix.setPixel(x, y + 1, r, g, b);
