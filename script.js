@@ -146,7 +146,7 @@ class WeatherDisplay {
     async fetchWeather() {
         try {
             // Using wttr.in API for weather data (no API key required)
-            const response = await fetch('https://wttr.in/NYC?format=j1');
+            const response = await fetch('https://wttr.in/10038?format=j1');
             const data = await response.json();
             
             this.weather = {
@@ -199,13 +199,15 @@ class WeatherDisplay {
         // Draw weather icon on the left (10x10 icon)
         this.drawWeatherIcon(weatherInfo.icon, 2, 3, weatherInfo.colors);
         
-        // Draw temperature (large) - centered right
+        // Draw temperature (large) - positioned after icon
         const tempStr = `${this.weather.temp}`;
-        const tempX = tempStr.length === 1 ? 22 : 18;
+        const tempX = 16;
         this.matrix.drawText(tempStr, tempX, 3, 255, 220, 180);
         
-        // Draw degree symbol
-        this.drawDegreeSymbol(tempX + (tempStr.length * 6), 3, 255, 200, 150);
+        // Draw degree symbol and F
+        const degreeX = tempX + (tempStr.length * 6);
+        this.drawDegreeSymbol(degreeX, 3, 255, 200, 150);
+        this.matrix.drawText('F', degreeX + 3, 3, 255, 200, 150);
         
         // Draw "NYC" label in top right corner
         this.matrix.drawText('NYC', 46, 1, 100, 180, 255);
@@ -215,13 +217,14 @@ class WeatherDisplay {
             this.matrix.setPixel(x, 15, 50, 50, 80);
         }
         
-        // Draw condition text on bottom half
+        // Draw condition text on bottom half - ensure it fits
         const conditionText = this.getShortCondition(this.weather.condition);
-        const condX = Math.floor((64 - (conditionText.length * 6)) / 2);
+        const textWidth = conditionText.length * 6;
+        const condX = textWidth > 62 ? 1 : Math.floor((64 - textWidth) / 2);
         this.matrix.drawText(conditionText, condX, 18, weatherInfo.textColor.r, weatherInfo.textColor.g, weatherInfo.textColor.b);
         
-        // Draw humidity indicator
-        this.drawHumidityBar(2, 27, this.weather.humidity);
+        // Draw humidity indicator - more compact
+        this.drawHumidityBar(1, 27, this.weather.humidity);
         
         this.matrix.render();
     }
@@ -238,22 +241,23 @@ class WeatherDisplay {
         // Draw humidity label
         this.matrix.drawText('H', x, y, 100, 200, 255);
         
-        // Draw humidity percentage bar
-        const barWidth = Math.floor((humidity / 100) * 24);
-        const barStartX = x + 8;
+        // Draw humidity percentage bar - more compact
+        const barWidth = Math.floor((humidity / 100) * 28);
+        const barStartX = x + 7;
         
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < 28; i++) {
             const color = i < barWidth ? 
-                { r: 50, g: 150 + i * 4, b: 255 } : 
+                { r: 50, g: 150 + i * 3, b: 255 } : 
                 { r: 20, g: 20, b: 40 };
             
             this.matrix.setPixel(barStartX + i, y + 1, color.r, color.g, color.b);
             this.matrix.setPixel(barStartX + i, y + 2, color.r, color.g, color.b);
         }
         
-        // Draw percentage text
+        // Draw percentage text - fits within 64 pixels
         const humidityText = `${humidity}%`;
-        this.matrix.drawText(humidityText, barStartX + 26, y, 150, 220, 255);
+        const textX = Math.min(barStartX + 30, 64 - (humidityText.length * 6) - 1);
+        this.matrix.drawText(humidityText, textX, y, 150, 220, 255);
     }
 
     drawWeatherIcon(iconData, x, y, colors) {
@@ -466,15 +470,15 @@ class WeatherDisplay {
             'Clear': 'CLEAR',
             'Partly cloudy': 'PARTLY',
             'Cloudy': 'CLOUDY',
-            'Overcast': 'OVERCAST',
+            'Overcast': 'OVRCAST',  // Shortened to fit
             'Mist': 'MISTY',
-            'Patchy rain possible': 'LIGHT RAIN',
-            'Light rain': 'LIGHT RAIN',
+            'Patchy rain possible': 'LT RAIN',
+            'Light rain': 'LT RAIN',
             'Rain': 'RAINY',
-            'Heavy rain': 'HEAVY RAIN',
+            'Heavy rain': 'HVY RAIN',
             'Snow': 'SNOWY',
-            'Light snow': 'LIGHT SNOW',
-            'Heavy snow': 'HEAVY SNOW',
+            'Light snow': 'LT SNOW',
+            'Heavy snow': 'HVY SNOW',
             'Fog': 'FOGGY',
             'Thunderstorm': 'STORM',
             'Thunder': 'STORM'
@@ -486,6 +490,7 @@ class WeatherDisplay {
             }
         }
         
+        // Ensure it fits within 64 pixels (10 chars max at 6 pixels each)
         return condition.substring(0, 10).toUpperCase();
     }
 }
