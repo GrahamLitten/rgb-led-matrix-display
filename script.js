@@ -891,18 +891,17 @@ class SubwayDisplay {
             return;
         }
 
-        // === SUBWAY LAYOUT - NO OVERLAP (Text = 7px tall, needs 7 rows spacing) ===
+        // === SUBWAY LAYOUT - 3x5 font (5px tall) + 1 blank = 6px per line ===
         
-        // Rows 0-6: Header
-        this.matrix.drawText('A', 1, 0, 0, 100, 255);
-        this.matrix.drawText('FULTON', 10, 0, 200, 200, 220);
-        this.matrix.drawText('UP', 54, 0, 100, 255, 100);
+        // Row 0-4: Header
+        this.matrix.drawText('A TRAIN', 1, 0, 0, 100, 255);
+        this.matrix.drawText('FULTON', 34, 0, 200, 200, 220);
         
-        // Display next 3 trains with proper spacing (4 would overlap!)
-        // Rows: 9-15, 16-22, 23-29 (perfect fit!)
-        const trainYPositions = [9, 16, 23]; // 3 trains fit with no overlap
+        // Can fit 4 trains now!
+        // Rows: 6, 12, 18, 24 (4 trains with 1 blank between)
+        const trainYPositions = [6, 12, 18, 24];
         
-        this.trains.slice(0, 3).forEach((train, idx) => {
+        this.trains.slice(0, 4).forEach((train, idx) => {
             const y = trainYPositions[idx];
             
             // Color coding based on arrival time
@@ -920,10 +919,10 @@ class SubwayDisplay {
             
             // Minutes
             const minStr = train.minutes === 0 ? 'NOW' : `${train.minutes}M`;
-            this.matrix.drawText(minStr, 12, y, color.r, color.g, color.b);
+            this.matrix.drawText(minStr, 8, y, color.r, color.g, color.b);
             
-            // Destination indicator
-            this.matrix.drawText('UP', 40, y, 180, 180, 200);
+            // Destination
+            this.matrix.drawText('UPTOWN', 32, y, 180, 180, 200);
         });
         
         this.matrix.render();
