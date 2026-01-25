@@ -1038,8 +1038,15 @@ document.getElementById('subwayBtn').addEventListener('click', async () => {
     sendToPi('subway');
 });
 
+document.getElementById('offBtn').addEventListener('click', async () => {
+    matrix.clear();
+    matrix.render();
+    setActiveButton('offBtn');
+    sendToPi('off');
+});
+
 function setActiveButton(activeId) {
-    ['weatherBtn', 'mlbBtn', 'subwayBtn'].forEach(id => {
+    ['weatherBtn', 'mlbBtn', 'subwayBtn', 'offBtn'].forEach(id => {
         document.getElementById(id).classList.toggle('active', id === activeId);
     });
 }
