@@ -87,7 +87,7 @@ class LEDMatrix {
         }
     }
 
-    // Compact 3x5 pixel font for better fit
+    // Compact 3x5 pixel font (with wider M, N, W for readability)
     get3x5Font() {
         return {
             '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
