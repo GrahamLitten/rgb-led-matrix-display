@@ -1037,6 +1037,16 @@ document.getElementById('subwayBtn').addEventListener('click', async () => {
     sendToPi('subway');
 });
 
+document.getElementById('busBtn').addEventListener('click', async () => {
+    // For now, just clear and show message
+    matrix.clear();
+    matrix.drawText('M15 BUS', 8, 8, 255, 150, 0);
+    matrix.drawText('WALL ST', 8, 16, 200, 200, 200);
+    matrix.render();
+    setActiveButton('busBtn');
+    sendToPi('bus');
+});
+
 document.getElementById('offBtn').addEventListener('click', async () => {
     matrix.clear();
     matrix.render();
@@ -1045,7 +1055,7 @@ document.getElementById('offBtn').addEventListener('click', async () => {
 });
 
 function setActiveButton(activeId) {
-    ['weatherBtn', 'mlbBtn', 'subwayBtn', 'offBtn'].forEach(id => {
+    ['weatherBtn', 'mlbBtn', 'subwayBtn', 'busBtn', 'offBtn'].forEach(id => {
         document.getElementById(id).classList.toggle('active', id === activeId);
     });
 }
