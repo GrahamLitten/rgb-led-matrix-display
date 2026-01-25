@@ -984,6 +984,34 @@ class SubwayDisplay {
 const matrix = new LEDMatrix('ledMatrix');
 const screenManager = new ScreenManager(matrix);
 
+// Pi Control Settings
+const PI_IP = '192.168.1.123';
+const PI_PORT = 5000;
+let piControlEnabled = false;
+
+async function sendToPi(screen) {
+    if (!piControlEnabled) return;
+    
+    try {
+        const response = await fetch(`http://${PI_IP}:${PI_PORT}/api/screen`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                screen: screen,
+                auto_rotate: false
+            })
+        });
+        
+        if (response.ok) {
+            console.log(`✅ Pi screen changed to: ${screen}`);
+        }
+    } catch (error) {
+        console.log('⚠️ Could not connect to Pi:', error.message);
+    }
+}
+
 async function updateDisplay() {
     await screenManager.update();
 }
@@ -995,22 +1023,34 @@ document.getElementById('refreshBtn').addEventListener('click', updateDisplay);
 document.getElementById('weatherBtn').addEventListener('click', async () => {
     await screenManager.switchScreen('weather');
     setActiveButton('weatherBtn');
+    sendToPi('weather');
 });
 
 document.getElementById('mlbBtn').addEventListener('click', async () => {
     await screenManager.switchScreen('mlb');
     setActiveButton('mlbBtn');
+    sendToPi('mlb');
 });
 
 document.getElementById('subwayBtn').addEventListener('click', async () => {
     await screenManager.switchScreen('subway');
     setActiveButton('subwayBtn');
+    sendToPi('subway');
 });
 
 function setActiveButton(activeId) {
     ['weatherBtn', 'mlbBtn', 'subwayBtn'].forEach(id => {
         document.getElementById(id).classList.toggle('active', id === activeId);
     });
+}
+
+// Pi control toggle
+function togglePiControl() {
+    const checkbox = document.getElementById('piControlCheckbox');
+    if (checkbox) {
+        piControlEnabled = checkbox.checked;
+        console.log(`🖥️ Pi Control: ${piControlEnabled ? 'Enabled' : 'Disabled'}`);
+    }
 }
 
 // Initial load
